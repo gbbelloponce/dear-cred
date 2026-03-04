@@ -1,0 +1,11 @@
+model Payment {
+  id             String        @id @default(cuid())
+  installmentId  String
+  amount         Float
+  paymentDate    DateTime      @default(now())
+  method         PaymentMethod
+
+  installment    Installment   @relation(fields: [installmentId], references: [id])
+
+  @@map("payments")
+}

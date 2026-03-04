@@ -3,8 +3,12 @@ model Client {
   firstName String
   lastName  String
   phone     String
+  address   String
   dni       String   @unique
+  notes     String?
   createdAt DateTime @default(now())
+
+  loans     Loan[]
 
   @@map("clients")
 }

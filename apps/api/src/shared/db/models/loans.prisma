@@ -1,0 +1,18 @@
+model Loan {
+  id                String      @id @default(cuid())
+  clientId          String
+  principal         Float
+  interestRate      Float
+  totalAmount       Float
+  installmentAmount Float
+  installmentCount  Int
+  frequency         Frequency
+  startDate         DateTime
+  status            LoanStatus  @default(ACTIVE)
+  createdAt         DateTime    @default(now())
+
+  client            Client        @relation(fields: [clientId], references: [id])
+  installments      Installment[]
+
+  @@map("loans")
+}

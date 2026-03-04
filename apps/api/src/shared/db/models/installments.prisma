@@ -1,0 +1,15 @@
+model Installment {
+  id        String            @id @default(cuid())
+  loanId    String
+  number    Int
+  dueDate   DateTime
+  amount    Float
+  status    InstallmentStatus @default(PENDING)
+  isPenalty Boolean           @default(false)
+  createdAt DateTime          @default(now())
+
+  loan      Loan              @relation(fields: [loanId], references: [id])
+  payments  Payment[]
+
+  @@map("installments")
+}

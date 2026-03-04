@@ -1,0 +1,24 @@
+enum Frequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum LoanStatus {
+  ACTIVE
+  COMPLETED
+  OVERDUE
+}
+
+enum InstallmentStatus {
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  LATE_PAID
+  OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+}
