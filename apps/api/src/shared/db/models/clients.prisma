@@ -1,0 +1,10 @@
+model Client {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  phone     String
+  dni       String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("clients")
+}
