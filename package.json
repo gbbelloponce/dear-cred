@@ -1,0 +1,7 @@
+{
+  "name": "dear-cred",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ]
+}
