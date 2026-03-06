@@ -31,7 +31,7 @@ UI is in **Spanish**. Code (variables, functions, types, comments) is in **Engli
 ```
 dear-cred/
 ├── apps/
-│   ├── web/                        # React + Vite frontend
+│   ├── ui/                        # React + Vite frontend
 │   │   ├── public/
 │   │   ├── src/
 │   │   │   ├── assets/
