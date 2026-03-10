@@ -12,6 +12,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, { ...options, headers })
   if (res.status === 401) {
     localStorage.removeItem(TOKEN_KEY)
+    window.location.replace('/login')
     throw new Error('Unauthorized')
   }
   if (!res.ok) throw new Error(`API error: ${res.status}`)
