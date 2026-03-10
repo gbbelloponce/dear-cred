@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { api, type DashboardData } from '@/services/api'
+
+const DEBT_PAGE_SIZE = 8
 
 function fmt(n: number) {
   return new Intl.NumberFormat('es-AR', {
@@ -14,6 +17,7 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [debtPage, setDebtPage] = useState(1)
 
   useEffect(() => {
     api
@@ -28,6 +32,13 @@ export default function Dashboard() {
 
   const cashTotal = data.cashVsTransfer['CASH'] ?? 0
   const transferTotal = data.cashVsTransfer['TRANSFER'] ?? 0
+
+  const debtTotalPages = Math.max(1, Math.ceil(data.debtPerClient.length / DEBT_PAGE_SIZE))
+  const debtCurrentPage = Math.min(debtPage, debtTotalPages)
+  const paginatedDebt = data.debtPerClient.slice(
+    (debtCurrentPage - 1) * DEBT_PAGE_SIZE,
+    debtCurrentPage * DEBT_PAGE_SIZE,
+  )
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-6">
@@ -113,7 +124,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {data.debtPerClient.map((row) => (
+                {paginatedDebt.map((row) => (
                   <tr key={row.loanId} className="border-b last:border-0">
                     <td className="px-4 py-2">{row.clientName}</td>
                     <td className="px-4 py-2 text-right font-medium">{fmt(row.remaining)}</td>
@@ -121,6 +132,31 @@ export default function Dashboard() {
                 ))}
               </tbody>
             </table>
+            {debtTotalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t">
+                <p className="text-xs text-muted-foreground">
+                  {data.debtPerClient.length} clientes · página {debtCurrentPage} de {debtTotalPages}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={debtCurrentPage === 1}
+                    onClick={() => setDebtPage((p) => p - 1)}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={debtCurrentPage === debtTotalPages}
+                    onClick={() => setDebtPage((p) => p + 1)}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
