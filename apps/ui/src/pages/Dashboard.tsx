@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
-import { Calendar01Icon } from '@hugeicons/react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { Calendar01Icon } from '@hugeicons/core-free-icons'
 import { api, type DashboardData } from '@/services/api'
 
 const DEBT_PAGE_SIZE = 8
@@ -29,7 +30,7 @@ function DatePicker({ value, onChange, label }: { value: Date; onChange: (d: Dat
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm" className="w-36 justify-start font-normal">
-            <Calendar01Icon size={14} className="mr-2" />
+            <HugeiconsIcon icon={Calendar01Icon} size={14} className="mr-2" />
             {value.toLocaleDateString('es-AR')}
           </Button>
         </PopoverTrigger>
