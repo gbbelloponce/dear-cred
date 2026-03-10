@@ -1,21 +1,24 @@
 type Frequency = 'DAILY' | 'WEEKLY' | 'MONTHLY'
 
+// Due dates are always set to 23:00 UTC = 8 PM Argentina (UTC-3, no DST).
+// The cron job runs at 23:10 UTC, catching all installments due that day.
+
 export function computeNextDueDate(base: Date, frequency: Frequency): Date {
-  const d = new Date(base)
-  if (frequency === 'DAILY')   d.setDate(d.getDate() + 1)
-  if (frequency === 'WEEKLY')  d.setDate(d.getDate() + 7)
-  if (frequency === 'MONTHLY') d.setMonth(d.getMonth() + 1)
-  return d
+  const y = base.getUTCFullYear()
+  const m = base.getUTCMonth()
+  const d = base.getUTCDate()
+  if (frequency === 'DAILY')   return new Date(Date.UTC(y, m, d + 1, 23, 0, 0))
+  if (frequency === 'WEEKLY')  return new Date(Date.UTC(y, m, d + 7, 23, 0, 0))
+  /* MONTHLY */                return new Date(Date.UTC(y, m + 1, d, 23, 0, 0))
 }
 
 export function computeDueDates(startDate: Date, count: number, frequency: Frequency): Date[] {
-  const dates: Date[] = []
-  for (let i = 1; i <= count; i++) {
-    const d = new Date(startDate)
-    if (frequency === 'DAILY')   d.setDate(d.getDate() + i)
-    if (frequency === 'WEEKLY')  d.setDate(d.getDate() + i * 7)
-    if (frequency === 'MONTHLY') d.setMonth(d.getMonth() + i)
-    dates.push(d)
-  }
-  return dates
+  const y = startDate.getUTCFullYear()
+  const m = startDate.getUTCMonth()
+  const d = startDate.getUTCDate()
+  return Array.from({ length: count }, (_, i) => {
+    if (frequency === 'DAILY')   return new Date(Date.UTC(y, m, d + (i + 1), 23, 0, 0))
+    if (frequency === 'WEEKLY')  return new Date(Date.UTC(y, m, d + (i + 1) * 7, 23, 0, 0))
+    /* MONTHLY */                return new Date(Date.UTC(y, m + (i + 1), d, 23, 0, 0))
+  })
 }

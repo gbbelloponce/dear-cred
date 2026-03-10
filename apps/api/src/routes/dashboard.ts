@@ -13,7 +13,7 @@ dashboard.get('/', async (c) => {
   const toParam = c.req.query('to')
   const rangeStart = fromParam ? new Date(fromParam) : new Date(now.getFullYear(), now.getMonth(), 1)
   const rangeEnd = toParam
-    ? new Date(new Date(toParam).setHours(23, 59, 59, 999))
+    ? new Date(`${toParam}T23:59:59.999Z`)
     : now
 
   const [

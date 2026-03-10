@@ -116,9 +116,15 @@ export default function ClienteDetalle() {
     e.preventDefault()
     if (!payingId) return
     setPayError(null)
+    const inst = client?.loans.flatMap((l) => l.installments).find((i) => i.id === payingId)
+    const amount = parseFloat(payAmount)
+    if (inst && amount > inst.amount) {
+      setPayError(`El monto no puede superar ${fmt(inst.amount)}.`)
+      return
+    }
     setPayLoading(true)
     try {
-      await api.createPayment(payingId, { amount: parseFloat(payAmount), method: payMethod })
+      await api.createPayment(payingId, { amount, method: payMethod })
       setPayingId(null)
       setLoading(true)
       load()
@@ -308,6 +314,13 @@ export default function ClienteDetalle() {
                             onChange={(e) => setPayAmount(e.target.value)}
                             required
                           />
+                          <button
+                            type="button"
+                            className="text-xs text-muted-foreground hover:text-foreground text-left"
+                            onClick={() => setPayAmount(inst.amount.toString())}
+                          >
+                            Completar monto ({fmt(inst.amount)})
+                          </button>
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <Label>Método</Label>
