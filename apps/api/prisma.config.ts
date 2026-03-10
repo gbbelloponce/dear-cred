@@ -1,5 +1,8 @@
 import { defineConfig, env } from "prisma/config";
-import "dotenv/config";
+import { config } from "dotenv";
+
+const envFile = process.env.PRISMA_ENV_FILE ?? ".env.local";
+config({ path: envFile });
 
 export default defineConfig({
   schema: "src/shared/db/",
