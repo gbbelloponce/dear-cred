@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { Calendar01Icon } from '@hugeicons/react'
 import { api, type DashboardData } from '@/services/api'
 
 const DEBT_PAGE_SIZE = 8
@@ -13,19 +16,57 @@ function fmt(n: number) {
   }).format(n)
 }
 
+function defaultFrom() {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), 1)
+}
+
+function DatePicker({ value, onChange, label }: { value: Date; onChange: (d: Date) => void; label: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="w-36 justify-start font-normal">
+            <Calendar01Icon size={14} className="mr-2" />
+            {value.toLocaleDateString('es-AR')}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={value}
+            onSelect={(d) => {
+              if (d) {
+                onChange(d)
+                setOpen(false)
+              }
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [debtPage, setDebtPage] = useState(1)
+  const [from, setFrom] = useState<Date>(defaultFrom)
+  const [to, setTo] = useState<Date>(new Date())
 
   useEffect(() => {
+    setLoading(true)
+    setError(null)
     api
-      .getDashboard()
+      .getDashboard({ from, to })
       .then(setData)
       .catch(() => setError('No se pudieron cargar los datos.'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [from, to])
 
   if (loading) return <main className="max-w-3xl mx-auto px-4 py-6"><p className="text-muted-foreground">Cargando...</p></main>
   if (error || !data) return <main className="max-w-3xl mx-auto px-4 py-6"><p className="text-destructive">{error}</p></main>
@@ -42,7 +83,12 @@ export default function Dashboard() {
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-6">
-      <h1 className="text-xl font-semibold mb-6">Dashboard</h1>
+      <h1 className="text-xl font-semibold mb-4">Dashboard</h1>
+
+      <div className="flex gap-4 mb-6">
+        <DatePicker value={from} onChange={setFrom} label="Desde" />
+        <DatePicker value={to} onChange={setTo} label="Hasta" />
+      </div>
 
       <div className="grid grid-cols-2 gap-4 mb-6">
         <Card>
@@ -56,10 +102,10 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Cobrado este mes</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Cobrado en el período</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{fmt(data.collectedThisMonth)}</p>
+            <p className="text-2xl font-bold">{fmt(data.collected)}</p>
           </CardContent>
         </Card>
 
@@ -95,7 +141,7 @@ export default function Dashboard() {
       <Card className="mb-6">
         <CardHeader className="pb-1">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Efectivo vs Transferencia (total)
+            Efectivo vs Transferencia (período)
           </CardTitle>
         </CardHeader>
         <CardContent className="flex gap-8">

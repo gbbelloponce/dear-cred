@@ -9,12 +9,16 @@ dashboard.use('*', authMiddleware)
 
 dashboard.get('/', async (c) => {
   const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const fromParam = c.req.query('from')
+  const toParam = c.req.query('to')
+  const rangeStart = fromParam ? new Date(fromParam) : new Date(now.getFullYear(), now.getMonth(), 1)
+  const rangeEnd = toParam
+    ? new Date(new Date(toParam).setHours(23, 59, 59, 999))
+    : now
 
   const [
     pendingInstallments,
-    paymentsThisMonth,
+    paymentsInPeriod,
     overdueInstallmentsWithClients,
     allActiveLoans,
     paymentsByMethod,
@@ -25,9 +29,9 @@ dashboard.get('/', async (c) => {
       select: { amount: true, payments: { select: { amount: true } } },
     }),
 
-    // collectedThisMonth
+    // collected in period
     prisma.payment.aggregate({
-      where: { paymentDate: { gte: monthStart, lt: monthEnd } },
+      where: { paymentDate: { gte: rangeStart, lte: rangeEnd } },
       _sum: { amount: true },
     }),
 
@@ -49,9 +53,10 @@ dashboard.get('/', async (c) => {
       },
     }),
 
-    // cashVsTransfer
+    // cashVsTransfer in period
     prisma.payment.groupBy({
       by: ['method'],
+      where: { paymentDate: { gte: rangeStart, lte: rangeEnd } },
       _sum: { amount: true },
     }),
   ])
@@ -62,7 +67,7 @@ dashboard.get('/', async (c) => {
     return sum + (inst.amount - paid)
   }, 0)
 
-  const collectedThisMonth = paymentsThisMonth._sum.amount ?? 0
+  const collected = paymentsInPeriod._sum.amount ?? 0
 
   // overdueClients: unique clients
   const overdueMap = new Map<string, { id: string; firstName: string; lastName: string }>()
@@ -104,7 +109,7 @@ dashboard.get('/', async (c) => {
 
   return c.json({
     totalOwed,
-    collectedThisMonth,
+    collected,
     overdueClients,
     onTimeRate,
     cashVsTransfer,

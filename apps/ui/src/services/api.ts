@@ -87,7 +87,7 @@ export type ClientDetail = {
 
 export type DashboardData = {
   totalOwed: number
-  collectedThisMonth: number
+  collected: number
   overdueClients: Array<{ id: string; firstName: string; lastName: string }>
   onTimeRate: number
   cashVsTransfer: Record<string, number>
@@ -149,5 +149,11 @@ export const api = {
       method: 'PATCH',
     }),
 
-  getDashboard: () => apiFetch<DashboardData>('/dashboard'),
+  getDashboard: (params?: { from?: Date; to?: Date }) => {
+    const qs = new URLSearchParams()
+    if (params?.from) qs.set('from', params.from.toISOString().slice(0, 10))
+    if (params?.to) qs.set('to', params.to.toISOString().slice(0, 10))
+    const query = qs.toString() ? `?${qs}` : ''
+    return apiFetch<DashboardData>(`/dashboard${query}`)
+  },
 }
