@@ -43,7 +43,7 @@ dashboard.get('/', async (c) => {
 
     // for onTimeRate and debtPerClient
     prisma.loan.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: { in: ['ACTIVE', 'OVERDUE'] } },
       select: {
         id: true,
         client: { select: { id: true, firstName: true, lastName: true } },

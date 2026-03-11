@@ -23,7 +23,7 @@ clients.get('/clients', async (c) => {
     orderBy: { lastName: 'asc' },
     include: {
       loans: {
-        where: { status: 'ACTIVE' },
+        where: { status: { in: ['ACTIVE', 'OVERDUE'] } },
         take: 1,
         include: {
           installments: {
