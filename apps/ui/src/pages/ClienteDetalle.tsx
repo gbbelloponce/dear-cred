@@ -28,8 +28,13 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
   PENDING: 'secondary',
   PAID: 'default',
   PARTIALLY_PAID: 'outline',
-  LATE_PAID: 'secondary',
+  LATE_PAID: 'outline',
   OVERDUE: 'destructive',
+}
+
+const STATUS_CLASS: Partial<Record<string, string>> = {
+  PARTIALLY_PAID: 'border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  LATE_PAID: 'border-orange-400 bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
 }
 
 function fmt(n: number) {
@@ -460,7 +465,7 @@ export default function ClienteDetalle() {
                         <td className="py-2 pr-3">{fmtDate(inst.dueDate)}</td>
                         <td className="py-2 pr-3 text-right">{fmt(inst.amount)}</td>
                         <td className="py-2 pr-3 text-center">
-                          <Badge variant={STATUS_VARIANT[inst.status] ?? 'secondary'}>
+                          <Badge variant={STATUS_VARIANT[inst.status] ?? 'secondary'} className={STATUS_CLASS[inst.status]}>
                             {STATUS_LABEL[inst.status] ?? inst.status}
                           </Badge>
                         </td>
