@@ -10,7 +10,8 @@ internal.post('/process-overdue', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401)
   }
 
-  const now = new Date()
+  const body = await c.req.json().catch(() => ({}))
+  const now = body.asOf ? new Date(body.asOf) : new Date()
 
   const overdueInstallments = await prisma.installment.findMany({
     where: { status: 'PENDING', dueDate: { lt: now } },

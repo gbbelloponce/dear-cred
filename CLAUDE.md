@@ -314,7 +314,7 @@ PATCH  /installments/:id/resolve      # fully resolve a PARTIALLY_PAID installme
 
 GET    /dashboard                     # aggregated business metrics
 
-POST   /internal/process-overdue      # called by cron-job.org — requires x-internal-secret header
+POST   /internal/process-overdue      # called by cron-job.org — requires x-internal-secret header; optional body { asOf: ISO string } to simulate a specific time
 ```
 
 ---
@@ -349,6 +349,8 @@ Dates are displayed via `toLocaleDateString('es-AR')` — the browser renders th
 **Schedule:** Daily at 23:20 UTC (8:20 PM Argentina / UTC-3)
 **Endpoint:** `POST /internal/process-overdue`
 **Auth:** `x-internal-secret` header validated against `INTERNAL_CRON_SECRET` env var — return 401 immediately if mismatch
+
+**Optional body:** `{ "asOf": "<ISO datetime>" }` — overrides the reference time used for the overdue query. Defaults to `new Date()` when omitted. Useful for manual testing during the day without waiting for 23:20 UTC.
 
 **cron-job.org setup (once API is deployed):**
 - URL: `https://your-api-domain.com/internal/process-overdue`
