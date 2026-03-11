@@ -9,6 +9,7 @@ export async function appendPenaltyInstallment(
   loanId: string,
   installmentAmount: number,
   frequency: Frequency,
+  sourceInstallmentId?: string,
 ): Promise<void> {
   const last = await tx.installment.findFirst({
     where: { loanId },
@@ -25,6 +26,7 @@ export async function appendPenaltyInstallment(
       dueDate: nextDueDate,
       amount: installmentAmount,
       isPenalty: true,
+      penaltySourceId: sourceInstallmentId ?? null,
     },
   })
 }

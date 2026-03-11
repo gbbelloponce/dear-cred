@@ -31,6 +31,7 @@ internal.post('/process-overdue', async (c) => {
         installment.loan.id,
         installment.loan.installmentAmount,
         installment.loan.frequency,
+        installment.id,
       )
 
       if (installment.loan.status !== 'OVERDUE') {

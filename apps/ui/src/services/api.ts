@@ -56,6 +56,7 @@ export type Installment = {
   amount: number
   status: InstallmentStatus
   isPenalty: boolean
+  penaltySourceId: string | null
   payments: Payment[]
 }
 
@@ -139,15 +140,22 @@ export const api = {
 
   getLoan: (id: string) => apiFetch<LoanWithInstallments>(`/loans/${id}`),
 
-  createPayment: (installmentId: string, body: { amount: number; method: PaymentMethod }) =>
+  createPayment: (
+    installmentId: string,
+    body: { amount: number; method: PaymentMethod; paymentDate?: string },
+  ) =>
     apiFetch<{ success: boolean; status: InstallmentStatus }>(`/installments/${installmentId}/payments`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
 
-  resolveInstallment: (installmentId: string) =>
+  resolveInstallment: (
+    installmentId: string,
+    body?: { method?: PaymentMethod; paymentDate?: string },
+  ) =>
     apiFetch<{ success: boolean; status: InstallmentStatus }>(`/installments/${installmentId}/resolve`, {
       method: 'PATCH',
+      body: JSON.stringify(body ?? {}),
     }),
 
   getDashboard: (params?: { from?: Date; to?: Date }) => {

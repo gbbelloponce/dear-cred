@@ -66,8 +66,14 @@ export default function ClienteDetalle() {
   const [payingId, setPayingId] = useState<string | null>(null)
   const [payAmount, setPayAmount] = useState('')
   const [payMethod, setPayMethod] = useState<PaymentMethod>('CASH')
+  const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [payLoading, setPayLoading] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
+
+  // Resolve form
+  const [resolveMethod, setResolveMethod] = useState<PaymentMethod>('CASH')
+  const [resolveDate, setResolveDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [resolvingId, setResolvingId] = useState<string | null>(null)
 
   function load() {
     if (!id) return
@@ -109,6 +115,7 @@ export default function ClienteDetalle() {
     setPayingId(inst.id)
     setPayAmount('')
     setPayMethod('CASH')
+    setPayDate(new Date().toISOString().slice(0, 10))
     setPayError(null)
   }
 
@@ -124,7 +131,11 @@ export default function ClienteDetalle() {
     }
     setPayLoading(true)
     try {
-      await api.createPayment(payingId, { amount, method: payMethod })
+      await api.createPayment(payingId, {
+        amount,
+        method: payMethod,
+        paymentDate: new Date(payDate).toISOString(),
+      })
       setPayingId(null)
       setLoading(true)
       load()
@@ -135,9 +146,21 @@ export default function ClienteDetalle() {
     }
   }
 
-  async function handleResolve(installmentId: string) {
+  function startResolving(inst: Installment) {
+    setResolvingId(inst.id)
+    setResolveMethod('CASH')
+    setResolveDate(new Date().toISOString().slice(0, 10))
+  }
+
+  async function handleResolve(e: FormEvent) {
+    e.preventDefault()
+    if (!resolvingId) return
     try {
-      await api.resolveInstallment(installmentId)
+      await api.resolveInstallment(resolvingId, {
+        method: resolveMethod,
+        paymentDate: new Date(resolveDate).toISOString(),
+      })
+      setResolvingId(null)
       setLoading(true)
       load()
     } catch {
@@ -287,6 +310,56 @@ export default function ClienteDetalle() {
 
             <Separator />
 
+            {/* Resolve form */}
+            {resolvingId && (
+              <div className="rounded-lg border bg-muted/30 p-4">
+                {(() => {
+                  const inst = activeLoan.installments.find((i) => i.id === resolvingId)
+                  if (!inst) return null
+                  const paid = paidAmount(inst)
+                  const remaining = inst.amount - paid
+                  return (
+                    <form onSubmit={handleResolve} className="flex flex-col gap-3">
+                      <p className="text-sm font-medium">
+                        Cuota #{inst.number} — Saldar saldo restante ({fmt(remaining)})
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-1.5">
+                          <Label>Método</Label>
+                          <Select value={resolveMethod} onValueChange={(v) => setResolveMethod(v as PaymentMethod)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="CASH">Efectivo</SelectItem>
+                              <SelectItem value="TRANSFER">Transferencia</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label>Fecha de pago</Label>
+                          <Input
+                            type="date"
+                            value={resolveDate}
+                            onChange={(e) => setResolveDate(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button type="button" variant="outline" size="sm" onClick={() => setResolvingId(null)}>
+                          Cancelar
+                        </Button>
+                        <Button type="submit" size="sm">
+                          Saldar
+                        </Button>
+                      </div>
+                    </form>
+                  )
+                })()}
+              </div>
+            )}
+
             {/* Payment form */}
             {payingId && (
               <div className="rounded-lg border bg-muted/30 p-4">
@@ -335,6 +408,15 @@ export default function ClienteDetalle() {
                           </Select>
                         </div>
                       </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label>Fecha de pago</Label>
+                        <Input
+                          type="date"
+                          value={payDate}
+                          onChange={(e) => setPayDate(e.target.value)}
+                          required
+                        />
+                      </div>
                       {payError && <p className="text-sm text-destructive">{payError}</p>}
                       <div className="flex gap-2 justify-end">
                         <Button type="button" variant="outline" size="sm" onClick={() => setPayingId(null)}>
@@ -363,42 +445,49 @@ export default function ClienteDetalle() {
                   </tr>
                 </thead>
                 <tbody>
-                  {activeLoan.installments.map((inst) => (
-                    <tr key={inst.id} className="border-b last:border-0">
-                      <td className="py-2 pr-3 text-muted-foreground">
-                        {inst.number}
-                        {inst.isPenalty && <span className="text-destructive ml-0.5">*</span>}
-                      </td>
-                      <td className="py-2 pr-3">{fmtDate(inst.dueDate)}</td>
-                      <td className="py-2 pr-3 text-right">{fmt(inst.amount)}</td>
-                      <td className="py-2 pr-3 text-center">
-                        <Badge variant={STATUS_VARIANT[inst.status] ?? 'secondary'}>
-                          {STATUS_LABEL[inst.status] ?? inst.status}
-                        </Badge>
-                      </td>
-                      <td className="py-2 text-right">
-                        {(inst.status === 'PENDING' || inst.status === 'OVERDUE') && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => startPaying(inst)}
-                            disabled={payingId === inst.id}
-                          >
-                            Registrar pago
-                          </Button>
-                        )}
-                        {inst.status === 'PARTIALLY_PAID' && (
-                          <Button variant="outline" size="sm" onClick={() => handleResolve(inst.id)}>
-                            Saldar
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {activeLoan.installments.map((inst) => {
+                    const sourceNum = inst.penaltySourceId
+                      ? activeLoan.installments.find((i) => i.id === inst.penaltySourceId)?.number
+                      : null
+                    return (
+                      <tr key={inst.id} className="border-b last:border-0">
+                        <td className="py-2 pr-3 text-muted-foreground">
+                          <div>{inst.number}{inst.isPenalty && <span className="text-destructive ml-0.5">*</span>}</div>
+                          {inst.isPenalty && sourceNum != null && (
+                            <div className="text-xs text-muted-foreground">cuota #{sourceNum}</div>
+                          )}
+                        </td>
+                        <td className="py-2 pr-3">{fmtDate(inst.dueDate)}</td>
+                        <td className="py-2 pr-3 text-right">{fmt(inst.amount)}</td>
+                        <td className="py-2 pr-3 text-center">
+                          <Badge variant={STATUS_VARIANT[inst.status] ?? 'secondary'}>
+                            {STATUS_LABEL[inst.status] ?? inst.status}
+                          </Badge>
+                        </td>
+                        <td className="py-2 text-right">
+                          {(inst.status === 'PENDING' || inst.status === 'OVERDUE') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => startPaying(inst)}
+                              disabled={payingId === inst.id}
+                            >
+                              Registrar pago
+                            </Button>
+                          )}
+                          {inst.status === 'PARTIALLY_PAID' && (
+                            <Button variant="outline" size="sm" onClick={() => startResolving(inst)}>
+                              Saldar
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-muted-foreground">* Cuota de penalidad</p>
+            <p className="text-xs text-muted-foreground">* Penalidad — el número debajo indica la cuota que la originó</p>
           </CardContent>
         </Card>
       ) : (

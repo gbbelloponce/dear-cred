@@ -10,6 +10,12 @@ import type { AppEnv } from '../lib/types.ts'
 const paymentSchema = z.object({
   amount: z.number().positive(),
   method: z.enum(['CASH', 'TRANSFER']),
+  paymentDate: z.string().datetime().optional(),
+})
+
+const resolveSchema = z.object({
+  method: z.enum(['CASH', 'TRANSFER']).optional(),
+  paymentDate: z.string().datetime().optional(),
 })
 
 const installments = new Hono<AppEnv>()
@@ -19,7 +25,7 @@ installments.use('/:id/resolve', authMiddleware)
 
 installments.post('/:id/payments', zValidator('json', paymentSchema), async (c) => {
   const id = c.req.param('id')
-  const { amount, method } = c.req.valid('json')
+  const { amount, method, paymentDate } = c.req.valid('json')
 
   const installment = await prisma.installment.findUniqueOrThrow({
     where: { id },
@@ -37,8 +43,8 @@ installments.post('/:id/payments', zValidator('json', paymentSchema), async (c) 
     throw new HTTPException(409, { message: 'Use /resolve to pay the remaining balance' })
   }
 
-  const now = new Date()
-  const isOverdue = now > installment.dueDate
+  const effectiveDate = paymentDate ? new Date(paymentDate) : new Date()
+  const isOverdue = effectiveDate > installment.dueDate
   const isPartial = amount < installment.amount
 
   let newStatus: 'PAID' | 'LATE_PAID' | 'PARTIALLY_PAID'
@@ -52,7 +58,7 @@ installments.post('/:id/payments', zValidator('json', paymentSchema), async (c) 
 
   await prisma.$transaction(async (tx) => {
     await tx.payment.create({
-      data: { installmentId: id, amount, method, paymentDate: now },
+      data: { installmentId: id, amount, method, paymentDate: effectiveDate },
     })
     await tx.installment.update({
       where: { id },
@@ -64,6 +70,7 @@ installments.post('/:id/payments', zValidator('json', paymentSchema), async (c) 
         installment.loan.id,
         installment.loan.installmentAmount,
         installment.loan.frequency,
+        id,
       )
     }
   })
@@ -75,8 +82,9 @@ installments.post('/:id/payments', zValidator('json', paymentSchema), async (c) 
   return c.json({ success: true, status: newStatus })
 })
 
-installments.patch('/:id/resolve', async (c) => {
+installments.patch('/:id/resolve', zValidator('json', resolveSchema), async (c) => {
   const id = c.req.param('id')
+  const { method, paymentDate } = c.req.valid('json')
 
   const installment = await prisma.installment.findUniqueOrThrow({
     where: { id },
@@ -92,14 +100,15 @@ installments.patch('/:id/resolve', async (c) => {
 
   const paid = installment.payments.reduce((sum, p) => sum + p.amount, 0)
   const remaining = installment.amount - paid
+  const effectiveDate = paymentDate ? new Date(paymentDate) : new Date()
 
   await prisma.$transaction(async (tx) => {
     await tx.payment.create({
       data: {
         installmentId: id,
         amount: remaining,
-        method: 'CASH',
-        paymentDate: new Date(),
+        method: method ?? 'CASH',
+        paymentDate: effectiveDate,
       },
     })
     await tx.installment.update({
