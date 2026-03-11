@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { HTTPException } from 'hono/http-exception'
 import { prisma } from '../shared/db/index.ts'
 import { authMiddleware } from '../middleware/auth.ts'
-import { appendPenaltyInstallment, checkLoanCompletion } from '../lib/loanService.ts'
+import { appendPenaltyInstallment, checkLoanCompletion, restoreActiveLoanStatus } from '../lib/loanService.ts'
 import type { AppEnv } from '../lib/types.ts'
 
 const paymentSchema = z.object({
@@ -77,6 +77,7 @@ installments.post('/:id/payments', zValidator('json', paymentSchema), async (c) 
 
   if (newStatus === 'PAID' || newStatus === 'LATE_PAID') {
     await checkLoanCompletion(installment.loan.id)
+    await restoreActiveLoanStatus(installment.loan.id)
   }
 
   return c.json({ success: true, status: newStatus })
@@ -118,6 +119,7 @@ installments.patch('/:id/resolve', zValidator('json', resolveSchema), async (c) 
   })
 
   await checkLoanCompletion(installment.loan.id)
+  await restoreActiveLoanStatus(installment.loan.id)
 
   return c.json({ success: true, status: 'LATE_PAID' })
 })

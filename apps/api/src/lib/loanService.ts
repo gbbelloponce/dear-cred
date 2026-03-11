@@ -48,3 +48,22 @@ export async function checkLoanCompletion(loanId: string): Promise<void> {
     })
   }
 }
+
+export async function restoreActiveLoanStatus(loanId: string): Promise<void> {
+  const loan = await prisma.loan.findUnique({
+    where: { id: loanId },
+    select: { status: true },
+  })
+  if (loan?.status !== 'OVERDUE') return
+
+  const overdueCount = await prisma.installment.count({
+    where: { loanId, status: 'OVERDUE' },
+  })
+
+  if (overdueCount === 0) {
+    await prisma.loan.update({
+      where: { id: loanId },
+      data: { status: 'ACTIVE' },
+    })
+  }
+}
