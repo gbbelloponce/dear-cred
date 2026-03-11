@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 import { api, type ClientDetail, type LoanWithInstallments, type Installment, type PaymentMethod } from '@/services/api'
 
 const FREQ_LABEL: Record<string, string> = {
@@ -237,6 +238,10 @@ export default function ClienteDetalle() {
   // Confirm dialog
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => Promise<void> } | null>(null)
 
+  // Nullify loan dialog
+  const [nullifyDialog, setNullifyDialog] = useState<{ loanId: string } | null>(null)
+  const [nullifyVoidPayments, setNullifyVoidPayments] = useState(false)
+
   // Expanded past loans
   const [expandedLoanIds, setExpandedLoanIds] = useState<Set<string>>(new Set())
 
@@ -334,14 +339,8 @@ export default function ClienteDetalle() {
   }
 
   function handleNullifyLoan(loanId: string) {
-    setConfirmDialog({
-      message: '¿Seguro que querés anular este préstamo? Esta acción no se puede deshacer.',
-      onConfirm: async () => {
-        await api.nullifyLoan(loanId)
-        setLoading(true)
-        load()
-      },
-    })
+    setNullifyVoidPayments(false)
+    setNullifyDialog({ loanId })
   }
 
   function handleVoidPayment(paymentId: string) {
@@ -672,6 +671,43 @@ export default function ClienteDetalle() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={!!nullifyDialog} onOpenChange={(open) => { if (!open) setNullifyDialog(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Anular este préstamo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex items-start gap-3 px-1 py-2">
+            <Checkbox
+              id="void-payments"
+              checked={nullifyVoidPayments}
+              onCheckedChange={(v) => setNullifyVoidPayments(!!v)}
+            />
+            <div className="flex flex-col gap-0.5">
+              <label htmlFor="void-payments" className="text-sm font-medium cursor-pointer">
+                Anular también los pagos registrados
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Los pagos no aparecerán en las estadísticas del dashboard.
+              </p>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              await api.nullifyLoan(nullifyDialog!.loanId, { voidPayments: nullifyVoidPayments })
+              setNullifyDialog(null)
+              setLoading(true)
+              load()
+            }}>
+              Anular préstamo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!confirmDialog} onOpenChange={(open) => { if (!open) setConfirmDialog(null) }}>
         <AlertDialogContent>

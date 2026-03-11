@@ -159,8 +159,11 @@ export const api = {
       body: JSON.stringify(body ?? {}),
     }),
 
-  nullifyLoan: (loanId: string) =>
-    apiFetch<{ id: string; status: LoanStatus }>(`/loans/${loanId}/nullify`, { method: 'POST' }),
+  nullifyLoan: (loanId: string, body?: { voidPayments?: boolean }) =>
+    apiFetch<{ id: string; status: LoanStatus }>(`/loans/${loanId}/nullify`, {
+      method: 'POST',
+      body: JSON.stringify(body ?? {}),
+    }),
 
   voidPayment: (paymentId: string) =>
     apiFetch<{ success: boolean }>(`/payments/${paymentId}/void`, { method: 'POST' }),

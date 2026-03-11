@@ -91,8 +91,13 @@ loans.get('/loans/:id', async (c) => {
   return c.json(loan)
 })
 
-loans.post('/loans/:id/nullify', async (c) => {
+const nullifySchema = z.object({
+  voidPayments: z.boolean().optional(),
+})
+
+loans.post('/loans/:id/nullify', zValidator('json', nullifySchema), async (c) => {
   const id = c.req.param('id')
+  const { voidPayments } = c.req.valid('json')
 
   const loan = await prisma.loan.findUniqueOrThrow({ where: { id } })
 
@@ -100,9 +105,14 @@ loans.post('/loans/:id/nullify', async (c) => {
     throw new HTTPException(409, { message: 'Only ACTIVE or OVERDUE loans can be nullified' })
   }
 
-  const updated = await prisma.loan.update({
-    where: { id },
-    data: { status: 'NULLIFIED' },
+  const updated = await prisma.$transaction(async (tx) => {
+    if (voidPayments) {
+      await tx.payment.updateMany({
+        where: { isVoided: false, installment: { loanId: id } },
+        data: { isVoided: true },
+      })
+    }
+    return tx.loan.update({ where: { id }, data: { status: 'NULLIFIED' } })
   })
 
   return c.json(updated)
