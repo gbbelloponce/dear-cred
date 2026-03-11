@@ -139,7 +139,7 @@ function InstallmentTable({
                           {isExpanded ? 'Ocultar' : 'Ver pagos'}
                         </Button>
                       )}
-                      {onStartPaying && (inst.status === 'PENDING' || inst.status === 'OVERDUE') && (
+                      {loan.status !== 'COMPLETED' && loan.status !== 'NULLIFIED' && onStartPaying && (inst.status === 'PENDING' || inst.status === 'OVERDUE') && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -149,12 +149,12 @@ function InstallmentTable({
                           Registrar pago
                         </Button>
                       )}
-                      {onStartResolving && inst.status === 'PARTIALLY_PAID' && (
+                      {loan.status !== 'COMPLETED' && loan.status !== 'NULLIFIED' && onStartResolving && inst.status === 'PARTIALLY_PAID' && (
                         <Button variant="outline" size="sm" onClick={() => onStartResolving(inst)}>
                           Saldar
                         </Button>
                       )}
-                      {inst.isPenalty && inst.status === 'PENDING' && (
+                      {loan.status !== 'COMPLETED' && loan.status !== 'NULLIFIED' && inst.isPenalty && inst.status === 'PENDING' && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -737,7 +737,7 @@ export default function ClienteDetalle() {
                 <div key={loan.id} className="rounded-lg border text-sm">
                   <button
                     type="button"
-                    className="w-full px-4 py-3 flex justify-between items-center text-left hover:bg-muted/30 transition-colors rounded-lg"
+                    className="w-full px-4 py-3 flex justify-between items-center text-left hover:bg-muted/30 transition-colors rounded-lg cursor-pointer"
                     onClick={() => togglePastLoan(loan.id)}
                   >
                     <div>
