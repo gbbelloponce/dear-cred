@@ -203,16 +203,17 @@ model Loan {
 }
 
 model Installment {
-  id        String            @id @default(cuid())
-  loanId    String
-  number    Int               // sequential order (1, 2, 3...) including penalties
-  dueDate   DateTime
-  amount    Float             // always = loan.installmentAmount
-  status    InstallmentStatus
-  isPenalty Boolean           @default(false)
-  createdAt DateTime          @default(now())
-  loan      Loan              @relation(fields: [loanId], references: [id])
-  payments  Payment[]
+  id              String            @id @default(cuid())
+  loanId          String
+  number          Int               // sequential order (1, 2, 3...) including penalties
+  dueDate         DateTime
+  amount          Float             // always = loan.installmentAmount
+  status          InstallmentStatus
+  isPenalty       Boolean           @default(false)
+  penaltySourceId String?           // id of the installment that triggered this penalty
+  createdAt       DateTime          @default(now())
+  loan            Loan              @relation(fields: [loanId], references: [id])
+  payments        Payment[]
 }
 
 model Payment {
@@ -221,6 +222,7 @@ model Payment {
   amount        Float
   paymentDate   DateTime      @default(now())
   method        PaymentMethod
+  isVoided      Boolean       @default(false)
   installment   Installment   @relation(fields: [installmentId], references: [id])
 }
 
@@ -234,6 +236,7 @@ enum LoanStatus {
   ACTIVE
   COMPLETED
   OVERDUE
+  NULLIFIED  // admin-cancelled loan
 }
 
 enum InstallmentStatus {
@@ -292,6 +295,25 @@ OVERDUE → LATE_PAID      (paid in full after being overdue)
 - Every payment stores: `amount`, `paymentDate`, `method` (CASH | TRANSFER)
 - Multiple `Payment` rows can exist per installment (partial + later full resolution)
 
+### Loan Nullification
+- Only `ACTIVE` or `OVERDUE` loans can be nullified
+- Sets loan `status` to `NULLIFIED`
+- Optional `{ voidPayments: true }` body bulk-sets `isVoided: true` on all non-voided payments for that loan (done in a single transaction)
+- Nullified loans are excluded from all dashboard queries (`totalOwed`, `overdueClients`, `debtPerClient`)
+- `collectedThisMonth` and `cashVsTransfer` already filter `isVoided: false`, so voided payments are automatically excluded
+- No payments or installment modifications can be made on a NULLIFIED loan
+
+### Payment Voiding
+- Any non-voided payment on an ACTIVE or OVERDUE loan can be manually voided
+- After voiding, installment status is recalculated from remaining non-voided payments
+- If no valid payments remain, installment may revert to `OVERDUE` (if past due date) or `PENDING`
+- Loan status is updated accordingly (may revert to `OVERDUE` if an installment becomes OVERDUE)
+
+### Penalty Installment Deletion
+- Only `PENDING` penalty installments on non-COMPLETED, non-NULLIFIED loans can be deleted
+- After deletion, all subsequent installment `number` values are decremented by 1 to keep the sequence contiguous
+- After renumbering, loan completion and status are re-evaluated
+
 ---
 
 ## API Routes (REST)
@@ -311,6 +333,10 @@ GET    /loans/:id                     # loan detail with all installments
 
 POST   /installments/:id/payments     # register full or partial payment
 PATCH  /installments/:id/resolve      # fully resolve a PARTIALLY_PAID installment
+DELETE /installments/:id              # delete a PENDING penalty installment (renumbers subsequent)
+
+POST   /loans/:id/nullify             # nullify ACTIVE or OVERDUE loan; optional body { voidPayments?: boolean }
+POST   /payments/:id/void             # void a single payment; recalculates installment status
 
 GET    /dashboard                     # aggregated business metrics
 
@@ -406,6 +432,10 @@ Dates are displayed via `toLocaleDateString('es-AR')` — the browser renders th
 - Each overdue event (cron) triggers one penalty installment appended at end of plan
 - `PARTIALLY_PAID` installments can only be fully resolved — no second partial allowed
 - Loan is `COMPLETED` only when all installments are `PAID` or `LATE_PAID`
+- Voided payments (`isVoided: true`) are excluded from all dashboard collected/cashVsTransfer stats
+- NULLIFIED loans are excluded from all dashboard debt/overdue stats
+- No payments or installment changes allowed on COMPLETED or NULLIFIED loans
+- Penalty installments track their source via `penaltySourceId` (nullable FK to the installment that triggered the penalty)
 - No file uploads — notes/observations are plain text only
 - UI language: **Spanish**
 - Code language: **English**
