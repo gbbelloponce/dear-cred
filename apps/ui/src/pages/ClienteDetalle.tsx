@@ -68,6 +68,7 @@ function InstallmentTable({
   onStartPaying,
   onStartResolving,
   onVoidPayment,
+  onDeleteInstallment,
   allowVoid,
   payingId,
 }: {
@@ -75,6 +76,7 @@ function InstallmentTable({
   onStartPaying: (inst: Installment) => void
   onStartResolving: (inst: Installment) => void
   onVoidPayment: (paymentId: string) => void
+  onDeleteInstallment: (inst: Installment) => void
   allowVoid: boolean
   payingId?: string | null
 }) {
@@ -149,6 +151,16 @@ function InstallmentTable({
                       {onStartResolving && inst.status === 'PARTIALLY_PAID' && (
                         <Button variant="outline" size="sm" onClick={() => onStartResolving(inst)}>
                           Saldar
+                        </Button>
+                      )}
+                      {inst.isPenalty && inst.status === 'PENDING' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => onDeleteInstallment(inst)}
+                        >
+                          Eliminar penalidad
                         </Button>
                       )}
                     </div>
@@ -337,6 +349,17 @@ export default function ClienteDetalle() {
       message: '¿Anular este pago? El estado de la cuota se recalculará.',
       onConfirm: async () => {
         await api.voidPayment(paymentId)
+        setLoading(true)
+        load()
+      },
+    })
+  }
+
+  function handleDeleteInstallment(inst: Installment) {
+    setConfirmDialog({
+      message: `¿Eliminar la penalidad #${inst.number}? Esta acción no se puede deshacer.`,
+      onConfirm: async () => {
+        await api.deleteInstallment(inst.id)
         setLoading(true)
         load()
       },
@@ -632,6 +655,7 @@ export default function ClienteDetalle() {
               onStartPaying={startPaying}
               onStartResolving={startResolving}
               onVoidPayment={handleVoidPayment}
+              onDeleteInstallment={handleDeleteInstallment}
               allowVoid={true}
               payingId={payingId}
             />
@@ -703,6 +727,7 @@ export default function ClienteDetalle() {
                         onStartPaying={() => {}}
                         onStartResolving={() => {}}
                         onVoidPayment={() => {}}
+                        onDeleteInstallment={() => {}}
                         allowVoid={false}
                       />
                       {loan.installments.some((i) => i.isPenalty) && (

@@ -165,6 +165,9 @@ export const api = {
   voidPayment: (paymentId: string) =>
     apiFetch<{ success: boolean }>(`/payments/${paymentId}/void`, { method: 'POST' }),
 
+  deleteInstallment: (installmentId: string) =>
+    apiFetch<{ success: boolean }>(`/installments/${installmentId}`, { method: 'DELETE' }),
+
   getDashboard: (params?: { from?: Date; to?: Date }) => {
     const qs = new URLSearchParams()
     if (params?.from) qs.set('from', params.from.toISOString().slice(0, 10))

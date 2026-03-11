@@ -128,4 +128,35 @@ installments.patch('/:id/resolve', zValidator('json', resolveSchema), async (c) 
   return c.json({ success: true, status: 'LATE_PAID' })
 })
 
+installments.use('/:id', authMiddleware)
+
+installments.delete('/:id', async (c) => {
+  const id = c.req.param('id')
+
+  const installment = await prisma.installment.findUniqueOrThrow({
+    where: { id },
+    include: { loan: { select: { id: true, status: true } } },
+  })
+
+  if (!installment.isPenalty)
+    throw new HTTPException(409, { message: 'Only penalty installments can be deleted' })
+  if (installment.status !== 'PENDING')
+    throw new HTTPException(409, { message: 'Only PENDING penalty installments can be deleted' })
+  if (installment.loan.status === 'NULLIFIED' || installment.loan.status === 'COMPLETED')
+    throw new HTTPException(409, { message: 'Cannot modify installments on a completed or nullified loan' })
+
+  await prisma.$transaction(async (tx) => {
+    await tx.installment.delete({ where: { id } })
+    await tx.installment.updateMany({
+      where: { loanId: installment.loanId, number: { gt: installment.number } },
+      data: { number: { decrement: 1 } },
+    })
+  })
+
+  await restoreActiveLoanStatus(installment.loan.id)
+  await checkLoanCompletion(installment.loan.id)
+
+  return c.json({ success: true })
+})
+
 export default installments
