@@ -7,6 +7,7 @@ import loans from './routes/loans.ts'
 import installments from './routes/installments.ts'
 import dashboard from './routes/dashboard.ts'
 import internal from './routes/internal.ts'
+import payments from './routes/payments.ts'
 
 const app = new Hono()
 
@@ -24,6 +25,7 @@ app.route('/auth', auth)
 app.route('/', clients)
 app.route('/', loans)
 app.route('/installments', installments)
+app.route('/payments', payments)
 app.route('/dashboard', dashboard)
 app.route('/internal', internal)
 

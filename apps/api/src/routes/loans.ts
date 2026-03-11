@@ -19,6 +19,7 @@ const loans = new Hono<AppEnv>()
 
 loans.use('/clients/:id/loans', authMiddleware)
 loans.use('/loans/:id', authMiddleware)
+loans.use('/loans/:id/nullify', authMiddleware)
 
 loans.get('/clients/:id/loans', async (c) => {
   const data = await prisma.loan.findMany({
@@ -39,7 +40,7 @@ loans.post('/clients/:id/loans', zValidator('json', createLoanSchema), async (c)
   const body = c.req.valid('json')
 
   const activeLoan = await prisma.loan.findFirst({
-    where: { clientId, status: 'ACTIVE' },
+    where: { clientId, status: { in: ['ACTIVE', 'OVERDUE'] } },
   })
   if (activeLoan) {
     throw new HTTPException(409, { message: 'Client already has an active loan' })
@@ -88,6 +89,23 @@ loans.get('/loans/:id', async (c) => {
     },
   })
   return c.json(loan)
+})
+
+loans.post('/loans/:id/nullify', async (c) => {
+  const id = c.req.param('id')
+
+  const loan = await prisma.loan.findUniqueOrThrow({ where: { id } })
+
+  if (loan.status !== 'ACTIVE' && loan.status !== 'OVERDUE') {
+    throw new HTTPException(409, { message: 'Only ACTIVE or OVERDUE loans can be nullified' })
+  }
+
+  const updated = await prisma.loan.update({
+    where: { id },
+    data: { status: 'NULLIFIED' },
+  })
+
+  return c.json(updated)
 })
 
 export default loans

@@ -40,13 +40,14 @@ export type ClientSummary = {
 export type PaymentMethod = 'CASH' | 'TRANSFER'
 export type Frequency = 'DAILY' | 'WEEKLY' | 'MONTHLY'
 export type InstallmentStatus = 'PENDING' | 'PAID' | 'PARTIALLY_PAID' | 'LATE_PAID' | 'OVERDUE'
-export type LoanStatus = 'ACTIVE' | 'COMPLETED' | 'OVERDUE'
+export type LoanStatus = 'ACTIVE' | 'COMPLETED' | 'OVERDUE' | 'NULLIFIED'
 
 export type Payment = {
   id: string
   amount: number
   paymentDate: string
   method: PaymentMethod
+  isVoided: boolean
 }
 
 export type Installment = {
@@ -157,6 +158,12 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(body ?? {}),
     }),
+
+  nullifyLoan: (loanId: string) =>
+    apiFetch<{ id: string; status: LoanStatus }>(`/loans/${loanId}/nullify`, { method: 'POST' }),
+
+  voidPayment: (paymentId: string) =>
+    apiFetch<{ success: boolean }>(`/payments/${paymentId}/void`, { method: 'POST' }),
 
   getDashboard: (params?: { from?: Date; to?: Date }) => {
     const qs = new URLSearchParams()

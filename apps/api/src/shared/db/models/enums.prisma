@@ -8,6 +8,7 @@ enum LoanStatus {
   ACTIVE
   COMPLETED
   OVERDUE
+  NULLIFIED
 }
 
 enum InstallmentStatus {

@@ -50,7 +50,137 @@ function fmtDate(iso: string) {
 }
 
 function paidAmount(inst: Installment) {
-  return inst.payments.reduce((s, p) => s + p.amount, 0)
+  return inst.payments.filter((p) => !p.isVoided).reduce((s, p) => s + p.amount, 0)
+}
+
+function InstallmentTable({
+  loan,
+  onStartPaying,
+  onStartResolving,
+  onVoidPayment,
+  payingId,
+}: {
+  loan: LoanWithInstallments
+  onStartPaying: (inst: Installment) => void
+  onStartResolving: (inst: Installment) => void
+  onVoidPayment: (paymentId: string) => void
+  payingId?: string | null
+}) {
+  const [expandedInstIds, setExpandedInstIds] = useState<Set<string>>(new Set())
+
+  function toggleInstallment(instId: string) {
+    setExpandedInstIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(instId)) next.delete(instId)
+      else next.add(instId)
+      return next
+    })
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b">
+            <th className="text-left py-2 pr-3 font-medium text-muted-foreground w-8">#</th>
+            <th className="text-left py-2 pr-3 font-medium text-muted-foreground">Vencimiento</th>
+            <th className="text-right py-2 pr-3 font-medium text-muted-foreground">Monto</th>
+            <th className="text-center py-2 pr-3 font-medium text-muted-foreground">Estado</th>
+            <th className="text-right py-2 font-medium text-muted-foreground">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loan.installments.map((inst) => {
+            const sourceNum = inst.penaltySourceId
+              ? loan.installments.find((i) => i.id === inst.penaltySourceId)?.number
+              : null
+            const hasPayments = inst.payments.length > 0
+            const isExpanded = expandedInstIds.has(inst.id)
+            return (
+              <>
+                <tr key={inst.id} className="border-b last:border-0">
+                  <td className="py-2 pr-3 text-muted-foreground">
+                    <div>{inst.number}{inst.isPenalty && <span className="text-destructive ml-0.5">*</span>}</div>
+                    {inst.isPenalty && sourceNum != null && (
+                      <div className="text-xs text-muted-foreground">cuota #{sourceNum}</div>
+                    )}
+                  </td>
+                  <td className="py-2 pr-3">{fmtDate(inst.dueDate)}</td>
+                  <td className="py-2 pr-3 text-right">{fmt(inst.amount)}</td>
+                  <td className="py-2 pr-3 text-center">
+                    <Badge variant={STATUS_VARIANT[inst.status] ?? 'secondary'} className={STATUS_CLASS[inst.status]}>
+                      {STATUS_LABEL[inst.status] ?? inst.status}
+                    </Badge>
+                  </td>
+                  <td className="py-2 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {hasPayments && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7 px-2"
+                          onClick={() => toggleInstallment(inst.id)}
+                        >
+                          {isExpanded ? 'Ocultar' : 'Ver pagos'}
+                        </Button>
+                      )}
+                      {onStartPaying && (inst.status === 'PENDING' || inst.status === 'OVERDUE') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onStartPaying(inst)}
+                          disabled={payingId === inst.id}
+                        >
+                          Registrar pago
+                        </Button>
+                      )}
+                      {onStartResolving && inst.status === 'PARTIALLY_PAID' && (
+                        <Button variant="outline" size="sm" onClick={() => onStartResolving(inst)}>
+                          Saldar
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+                {isExpanded && inst.payments.map((p) => (
+                  <tr key={p.id} className="bg-muted/30 border-b last:border-0">
+                    <td />
+                    <td className="py-1.5 pr-3 text-xs text-muted-foreground pl-4" colSpan={1}>
+                      <span className={p.isVoided ? 'line-through opacity-50' : ''}>
+                        {fmtDate(p.paymentDate)}
+                      </span>
+                    </td>
+                    <td className="py-1.5 pr-3 text-right text-xs">
+                      <span className={p.isVoided ? 'line-through opacity-50' : ''}>
+                        {fmt(p.amount)}
+                      </span>
+                    </td>
+                    <td className="py-1.5 pr-3 text-center text-xs">
+                      <span className={p.isVoided ? 'opacity-50' : ''}>
+                        {p.method === 'CASH' ? 'Efectivo' : 'Transferencia'}
+                      </span>
+                    </td>
+                    <td className="py-1.5 text-right">
+                      {!p.isVoided && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7 px-2 text-destructive hover:text-destructive"
+                          onClick={() => onVoidPayment(p.id)}
+                        >
+                          Anular pago
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
 }
 
 export default function ClienteDetalle() {
@@ -79,6 +209,9 @@ export default function ClienteDetalle() {
   const [resolveMethod, setResolveMethod] = useState<PaymentMethod>('CASH')
   const [resolveDate, setResolveDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [resolvingId, setResolvingId] = useState<string | null>(null)
+
+  // Expanded past loans
+  const [expandedLoanIds, setExpandedLoanIds] = useState<Set<string>>(new Set())
 
   function load() {
     if (!id) return
@@ -173,13 +306,44 @@ export default function ClienteDetalle() {
     }
   }
 
+  async function handleNullifyLoan(loanId: string) {
+    if (!window.confirm('¿Seguro que querés anular este préstamo? Esta acción no se puede deshacer.')) return
+    try {
+      await api.nullifyLoan(loanId)
+      setLoading(true)
+      load()
+    } catch {
+      // silent
+    }
+  }
+
+  async function handleVoidPayment(paymentId: string) {
+    if (!window.confirm('¿Anular este pago?')) return
+    try {
+      await api.voidPayment(paymentId)
+      setLoading(true)
+      load()
+    } catch {
+      // silent
+    }
+  }
+
+  function togglePastLoan(loanId: string) {
+    setExpandedLoanIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(loanId)) next.delete(loanId)
+      else next.add(loanId)
+      return next
+    })
+  }
+
   if (loading) return <main className="max-w-3xl mx-auto px-4 py-6"><p className="text-muted-foreground">Cargando...</p></main>
   if (error || !client) return <main className="max-w-3xl mx-auto px-4 py-6"><p className="text-destructive">{error}</p></main>
 
   const activeLoan: LoanWithInstallments | undefined = client.loans.find(
     (l) => l.status === 'ACTIVE' || l.status === 'OVERDUE',
   )
-  const pastLoans = client.loans.filter((l) => l.status === 'COMPLETED')
+  const pastLoans = client.loans.filter((l) => l.status === 'COMPLETED' || l.status === 'NULLIFIED')
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-6 flex flex-col gap-6">
@@ -288,9 +452,19 @@ export default function ClienteDetalle() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Préstamo activo</CardTitle>
-              <Badge variant={activeLoan.status === 'OVERDUE' ? 'destructive' : 'default'}>
-                {activeLoan.status === 'OVERDUE' ? 'En mora' : 'Activo'}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={activeLoan.status === 'OVERDUE' ? 'destructive' : 'default'}>
+                  {activeLoan.status === 'OVERDUE' ? 'En mora' : 'Activo'}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive border-destructive/40 hover:bg-destructive/10"
+                  onClick={() => handleNullifyLoan(activeLoan.id)}
+                >
+                  Anular préstamo
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -438,60 +612,13 @@ export default function ClienteDetalle() {
             )}
 
             {/* Installment table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 pr-3 font-medium text-muted-foreground w-8">#</th>
-                    <th className="text-left py-2 pr-3 font-medium text-muted-foreground">Vencimiento</th>
-                    <th className="text-right py-2 pr-3 font-medium text-muted-foreground">Monto</th>
-                    <th className="text-center py-2 pr-3 font-medium text-muted-foreground">Estado</th>
-                    <th className="text-right py-2 font-medium text-muted-foreground">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeLoan.installments.map((inst) => {
-                    const sourceNum = inst.penaltySourceId
-                      ? activeLoan.installments.find((i) => i.id === inst.penaltySourceId)?.number
-                      : null
-                    return (
-                      <tr key={inst.id} className="border-b last:border-0">
-                        <td className="py-2 pr-3 text-muted-foreground">
-                          <div>{inst.number}{inst.isPenalty && <span className="text-destructive ml-0.5">*</span>}</div>
-                          {inst.isPenalty && sourceNum != null && (
-                            <div className="text-xs text-muted-foreground">cuota #{sourceNum}</div>
-                          )}
-                        </td>
-                        <td className="py-2 pr-3">{fmtDate(inst.dueDate)}</td>
-                        <td className="py-2 pr-3 text-right">{fmt(inst.amount)}</td>
-                        <td className="py-2 pr-3 text-center">
-                          <Badge variant={STATUS_VARIANT[inst.status] ?? 'secondary'} className={STATUS_CLASS[inst.status]}>
-                            {STATUS_LABEL[inst.status] ?? inst.status}
-                          </Badge>
-                        </td>
-                        <td className="py-2 text-right">
-                          {(inst.status === 'PENDING' || inst.status === 'OVERDUE') && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => startPaying(inst)}
-                              disabled={payingId === inst.id}
-                            >
-                              Registrar pago
-                            </Button>
-                          )}
-                          {inst.status === 'PARTIALLY_PAID' && (
-                            <Button variant="outline" size="sm" onClick={() => startResolving(inst)}>
-                              Saldar
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <InstallmentTable
+              loan={activeLoan}
+              onStartPaying={startPaying}
+              onStartResolving={startResolving}
+              onVoidPayment={handleVoidPayment}
+              payingId={payingId}
+            />
             <p className="text-xs text-muted-foreground">* Penalidad — el número debajo indica la cuota que la originó</p>
           </CardContent>
         </Card>
@@ -513,20 +640,47 @@ export default function ClienteDetalle() {
             <CardTitle className="text-base">Historial de préstamos</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {pastLoans.map((loan) => (
-              <div key={loan.id} className="rounded-lg border px-4 py-3 text-sm flex justify-between items-center">
-                <div>
-                  <p className="font-medium">{fmtDate(loan.startDate)}</p>
-                  <p className="text-muted-foreground">
-                    {fmt(loan.principal)} · {loan.installmentCount} cuotas · {FREQ_LABEL[loan.frequency]}
-                  </p>
+            {pastLoans.map((loan) => {
+              const isExpanded = expandedLoanIds.has(loan.id)
+              return (
+                <div key={loan.id} className="rounded-lg border text-sm">
+                  <button
+                    type="button"
+                    className="w-full px-4 py-3 flex justify-between items-center text-left hover:bg-muted/30 transition-colors rounded-lg"
+                    onClick={() => togglePastLoan(loan.id)}
+                  >
+                    <div>
+                      <p className="font-medium">{fmtDate(loan.startDate)}</p>
+                      <p className="text-muted-foreground">
+                        {fmt(loan.principal)} · {loan.installmentCount} cuotas · {FREQ_LABEL[loan.frequency]}
+                      </p>
+                    </div>
+                    <div className="text-right flex flex-col items-end gap-1">
+                      <p className="font-medium">{fmt(loan.totalAmount)}</p>
+                      {loan.status === 'NULLIFIED' ? (
+                        <Badge variant="outline" className="border-destructive/40 text-destructive">Anulado</Badge>
+                      ) : (
+                        <Badge variant="secondary">Finalizado</Badge>
+                      )}
+                    </div>
+                  </button>
+                  {isExpanded && (
+                    <div className="px-4 pb-4 flex flex-col gap-2">
+                      <Separator />
+                      <InstallmentTable
+                        loan={loan}
+                        onStartPaying={() => {}}
+                        onStartResolving={() => {}}
+                        onVoidPayment={handleVoidPayment}
+                      />
+                      {loan.installments.some((i) => i.isPenalty) && (
+                        <p className="text-xs text-muted-foreground">* Penalidad — el número debajo indica la cuota que la originó</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="text-right">
-                  <p className="font-medium">{fmt(loan.totalAmount)}</p>
-                  <Badge variant="secondary">Finalizado</Badge>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </CardContent>
         </Card>
       )}

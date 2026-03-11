@@ -4,6 +4,7 @@ model Payment {
   amount         Float
   paymentDate    DateTime      @default(now())
   method         PaymentMethod
+  isVoided       Boolean       @default(false)
 
   installment    Installment   @relation(fields: [installmentId], references: [id])
 
