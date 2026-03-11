@@ -31,7 +31,7 @@ export default function PrestamoNuevo() {
   const [principal, setPrincipal] = useState('')
   const [interestRate, setInterestRate] = useState('')
   const [installmentCount, setInstallmentCount] = useState('')
-  const [frequency, setFrequency] = useState<Frequency>('MONTHLY')
+  const [frequency, setFrequency] = useState<Frequency>('DAILY')
   const [startDate, setStartDate] = useState('')
 
   const principalNum = parseFloat(principal) || 0
