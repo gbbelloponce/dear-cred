@@ -27,6 +27,10 @@ payments.post('/:id/void', async (c) => {
     throw new HTTPException(409, { message: 'Payment is already voided' })
   }
 
+  if (payment.installment.loan.status === 'COMPLETED' || payment.installment.loan.status === 'NULLIFIED') {
+    throw new HTTPException(409, { message: 'Cannot void a payment on a completed or nullified loan' })
+  }
+
   const installment = payment.installment
   const now = new Date()
 

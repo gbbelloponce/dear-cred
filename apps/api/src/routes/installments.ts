@@ -31,9 +31,13 @@ installments.post('/:id/payments', zValidator('json', paymentSchema), async (c) 
     where: { id },
     include: {
       payments: true,
-      loan: { select: { id: true, installmentAmount: true, frequency: true } },
+      loan: { select: { id: true, installmentAmount: true, frequency: true, status: true } },
     },
   })
+
+  if (installment.loan.status === 'NULLIFIED') {
+    throw new HTTPException(409, { message: 'Cannot register a payment on a nullified loan' })
+  }
 
   if (installment.status === 'PAID' || installment.status === 'LATE_PAID') {
     throw new HTTPException(409, { message: 'Installment is already paid' })
@@ -99,7 +103,7 @@ installments.patch('/:id/resolve', zValidator('json', resolveSchema), async (c) 
     throw new HTTPException(409, { message: 'Installment is not partially paid' })
   }
 
-  const paid = installment.payments.reduce((sum, p) => sum + p.amount, 0)
+  const paid = installment.payments.filter((p) => !p.isVoided).reduce((sum, p) => sum + p.amount, 0)
   const remaining = installment.amount - paid
   const effectiveDate = paymentDate ? new Date(paymentDate) : new Date()
 

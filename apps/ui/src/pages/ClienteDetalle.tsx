@@ -8,6 +8,16 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { api, type ClientDetail, type LoanWithInstallments, type Installment, type PaymentMethod } from '@/services/api'
 
 const FREQ_LABEL: Record<string, string> = {
@@ -58,12 +68,14 @@ function InstallmentTable({
   onStartPaying,
   onStartResolving,
   onVoidPayment,
+  allowVoid,
   payingId,
 }: {
   loan: LoanWithInstallments
   onStartPaying: (inst: Installment) => void
   onStartResolving: (inst: Installment) => void
   onVoidPayment: (paymentId: string) => void
+  allowVoid: boolean
   payingId?: string | null
 }) {
   const [expandedInstIds, setExpandedInstIds] = useState<Set<string>>(new Set())
@@ -161,7 +173,7 @@ function InstallmentTable({
                       </span>
                     </td>
                     <td className="py-1.5 text-right">
-                      {!p.isVoided && (
+                      {allowVoid && !p.isVoided && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -209,6 +221,9 @@ export default function ClienteDetalle() {
   const [resolveMethod, setResolveMethod] = useState<PaymentMethod>('CASH')
   const [resolveDate, setResolveDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [resolvingId, setResolvingId] = useState<string | null>(null)
+
+  // Confirm dialog
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => Promise<void> } | null>(null)
 
   // Expanded past loans
   const [expandedLoanIds, setExpandedLoanIds] = useState<Set<string>>(new Set())
@@ -306,26 +321,26 @@ export default function ClienteDetalle() {
     }
   }
 
-  async function handleNullifyLoan(loanId: string) {
-    if (!window.confirm('¿Seguro que querés anular este préstamo? Esta acción no se puede deshacer.')) return
-    try {
-      await api.nullifyLoan(loanId)
-      setLoading(true)
-      load()
-    } catch {
-      // silent
-    }
+  function handleNullifyLoan(loanId: string) {
+    setConfirmDialog({
+      message: '¿Seguro que querés anular este préstamo? Esta acción no se puede deshacer.',
+      onConfirm: async () => {
+        await api.nullifyLoan(loanId)
+        setLoading(true)
+        load()
+      },
+    })
   }
 
-  async function handleVoidPayment(paymentId: string) {
-    if (!window.confirm('¿Anular este pago?')) return
-    try {
-      await api.voidPayment(paymentId)
-      setLoading(true)
-      load()
-    } catch {
-      // silent
-    }
+  function handleVoidPayment(paymentId: string) {
+    setConfirmDialog({
+      message: '¿Anular este pago? El estado de la cuota se recalculará.',
+      onConfirm: async () => {
+        await api.voidPayment(paymentId)
+        setLoading(true)
+        load()
+      },
+    })
   }
 
   function togglePastLoan(loanId: string) {
@@ -617,6 +632,7 @@ export default function ClienteDetalle() {
               onStartPaying={startPaying}
               onStartResolving={startResolving}
               onVoidPayment={handleVoidPayment}
+              allowVoid={true}
               payingId={payingId}
             />
             <p className="text-xs text-muted-foreground">* Penalidad — el número debajo indica la cuota que la originó</p>
@@ -632,6 +648,21 @@ export default function ClienteDetalle() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={!!confirmDialog} onOpenChange={(open) => { if (!open) setConfirmDialog(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar acción?</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDialog?.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => { await confirmDialog?.onConfirm(); setConfirmDialog(null) }}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Loan history */}
       {pastLoans.length > 0 && (
@@ -671,7 +702,8 @@ export default function ClienteDetalle() {
                         loan={loan}
                         onStartPaying={() => {}}
                         onStartResolving={() => {}}
-                        onVoidPayment={handleVoidPayment}
+                        onVoidPayment={() => {}}
+                        allowVoid={false}
                       />
                       {loan.installments.some((i) => i.isPenalty) && (
                         <p className="text-xs text-muted-foreground">* Penalidad — el número debajo indica la cuota que la originó</p>

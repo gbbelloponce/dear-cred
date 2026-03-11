@@ -25,19 +25,22 @@ dashboard.get('/', async (c) => {
   ] = await Promise.all([
     // totalOwed: sum of pending balances
     prisma.installment.findMany({
-      where: { status: { in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'] } },
-      select: { amount: true, payments: { select: { amount: true } } },
+      where: {
+        status: { in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'] },
+        loan: { status: { notIn: ['NULLIFIED'] } },
+      },
+      select: { amount: true, payments: { select: { amount: true, isVoided: true } } },
     }),
 
     // collected in period
     prisma.payment.aggregate({
-      where: { paymentDate: { gte: rangeStart, lte: rangeEnd } },
+      where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false },
       _sum: { amount: true },
     }),
 
     // overdueClients
     prisma.installment.findMany({
-      where: { status: 'OVERDUE' },
+      where: { status: 'OVERDUE', loan: { status: { notIn: ['NULLIFIED'] } } },
       select: { loan: { select: { client: { select: { id: true, firstName: true, lastName: true } } } } },
     }),
 
@@ -48,7 +51,7 @@ dashboard.get('/', async (c) => {
         id: true,
         client: { select: { id: true, firstName: true, lastName: true } },
         installments: {
-          select: { status: true, amount: true, payments: { select: { amount: true } } },
+          select: { status: true, amount: true, payments: { select: { amount: true, isVoided: true } } },
         },
       },
     }),
@@ -56,14 +59,14 @@ dashboard.get('/', async (c) => {
     // cashVsTransfer in period
     prisma.payment.groupBy({
       by: ['method'],
-      where: { paymentDate: { gte: rangeStart, lte: rangeEnd } },
+      where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false },
       _sum: { amount: true },
     }),
   ])
 
   // totalOwed: for each pending installment, owed = amount - sum(payments)
   const totalOwed = pendingInstallments.reduce((sum, inst) => {
-    const paid = inst.payments.reduce((s, p) => s + p.amount, 0)
+    const paid = inst.payments.filter((p) => !p.isVoided).reduce((s, p) => s + p.amount, 0)
     return sum + (inst.amount - paid)
   }, 0)
 
@@ -95,7 +98,7 @@ dashboard.get('/', async (c) => {
     const remaining = loan.installments
       .filter((i) => ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'].includes(i.status))
       .reduce((sum, i) => {
-        const paid = i.payments.reduce((s, p) => s + p.amount, 0)
+        const paid = i.payments.filter((p) => !p.isVoided).reduce((s, p) => s + p.amount, 0)
         return sum + (i.amount - paid)
       }, 0)
 
