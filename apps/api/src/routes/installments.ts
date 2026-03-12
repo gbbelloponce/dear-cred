@@ -77,6 +77,20 @@ installments.post('/:id/payments', zValidator('json', paymentSchema), async (c) 
         id,
       )
     }
+    if (newStatus === 'LATE_PAID') {
+      const existingPenalty = await tx.installment.findFirst({
+        where: { loanId: installment.loan.id, penaltySourceId: id },
+      })
+      if (!existingPenalty) {
+        await appendPenaltyInstallment(
+          tx,
+          installment.loan.id,
+          installment.loan.installmentAmount,
+          installment.loan.frequency,
+          id,
+        )
+      }
+    }
   })
 
   if (newStatus === 'PAID' || newStatus === 'LATE_PAID') {

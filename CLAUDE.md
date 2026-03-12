@@ -357,16 +357,16 @@ POST   /internal/process-overdue      # called by cron-job.org — requires x-in
 ## DateTime & Timezone Strategy
 
 **Argentina timezone:** `America/Argentina/Buenos_Aires` → UTC-3, permanently (no DST since 2008)
-**Conversion rule:** Argentina time = UTC − 3h → e.g. 8:00 PM ARG = 23:00 UTC
+**Conversion rule:** Argentina time = UTC − 3h → e.g. 5:00 PM ARG = 20:00 UTC
 
 ### Due Dates
-All installment due dates are stored in PostgreSQL as UTC timestamps at **23:00 UTC** (= 8:00 PM Argentina).
-Computed via `Date.UTC(y, m, d, 23, 0, 0)` in `dateUtils.ts`.
-This means: on the calendar day of the due date, the client has until 8:00 PM local time to pay.
+All installment due dates are stored in PostgreSQL as UTC timestamps at **20:00 UTC** (= 5:00 PM Argentina).
+Computed via `Date.UTC(y, m, d, 20, 0, 0)` in `dateUtils.ts`.
+This means: on the calendar day of the due date, the client has until 5:00 PM local time to pay.
 
 ### Cron Job Timing
-The cron runs at **23:20 UTC = 8:20 PM Argentina** — 20 minutes after the client deadline.
-At that moment: `now()` = 23:20 UTC > 23:00 UTC (today's due dates) → the overdue query fires correctly.
+The cron runs at **20:05 UTC = 5:05 PM Argentina** — 5 minutes after the client deadline.
+At that moment: `now()` = 20:05 UTC > 20:00 UTC (today's due dates) → the overdue query fires correctly.
 Query: `WHERE status = 'PENDING' AND dueDate < now()` catches all today's unpaid installments.
 
 ### Payment Date Comparison
@@ -381,17 +381,17 @@ Dates are displayed via `toLocaleDateString('es-AR')` — the browser renders th
 ## Scheduled Jobs
 
 **Service:** [cron-job.org](https://cron-job.org) (free tier)
-**Schedule:** Daily at 23:20 UTC (8:20 PM Argentina / UTC-3)
+**Schedule:** Daily at 20:05 UTC (5:05 PM Argentina / UTC-3)
 **Endpoint:** `POST /internal/process-overdue`
 **Auth:** `x-internal-secret` header validated against `INTERNAL_CRON_SECRET` env var — return 401 immediately if mismatch
 
-**Optional body:** `{ "asOf": "<ISO datetime>" }` — overrides the reference time used for the overdue query. Defaults to `new Date()` when omitted. Useful for manual testing during the day without waiting for 23:20 UTC.
+**Optional body:** `{ "asOf": "<ISO datetime>" }` — overrides the reference time used for the overdue query. Defaults to `new Date()` when omitted. Useful for manual testing during the day without waiting for 20:05 UTC.
 
 **cron-job.org setup:**
 - URL: `https://api-production-e92a.up.railway.app/internal/process-overdue`
 - Method: `POST`
 - Custom header: `x-internal-secret: <your secret>`
-- Schedule: daily at 23:20 UTC
+- Schedule: daily at 20:05 UTC
 
 ---
 
