@@ -8,6 +8,15 @@ UI is in **Spanish**. Code (variables, functions, types, comments) is in **Engli
 
 ---
 
+## Deployed URLs
+
+| Service  | URL                                              |
+|----------|--------------------------------------------------|
+| Frontend | https://dear-cred-ui.vercel.app                  |
+| API      | https://api-production-e92a.up.railway.app       |
+
+---
+
 ## Tech Stack
 
 | Layer      | Technology                                        |
@@ -378,8 +387,8 @@ Dates are displayed via `toLocaleDateString('es-AR')` — the browser renders th
 
 **Optional body:** `{ "asOf": "<ISO datetime>" }` — overrides the reference time used for the overdue query. Defaults to `new Date()` when omitted. Useful for manual testing during the day without waiting for 23:20 UTC.
 
-**cron-job.org setup (once API is deployed):**
-- URL: `https://your-api-domain.com/internal/process-overdue`
+**cron-job.org setup:**
+- URL: `https://api-production-e92a.up.railway.app/internal/process-overdue`
 - Method: `POST`
 - Custom header: `x-internal-secret: <your secret>`
 - Schedule: daily at 23:20 UTC
