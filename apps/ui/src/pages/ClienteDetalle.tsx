@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -245,11 +245,14 @@ export default function ClienteDetalle() {
   // Expanded past loans
   const [expandedLoanIds, setExpandedLoanIds] = useState<Set<string>>(new Set())
 
+  const mountedRef = useRef(true)
+
   function load() {
     if (!id) return
     api
       .getClient(id)
       .then((c) => {
+        if (!mountedRef.current) return
         setClient(c)
         setEditForm({
           firstName: c.firstName,
@@ -259,11 +262,15 @@ export default function ClienteDetalle() {
           notes: c.notes ?? '',
         })
       })
-      .catch(() => setError('No se pudo cargar el cliente.'))
-      .finally(() => setLoading(false))
+      .catch(() => { if (mountedRef.current) setError('No se pudo cargar el cliente.') })
+      .finally(() => { if (mountedRef.current) setLoading(false) })
   }
 
-  useEffect(() => { load() }, [id])
+  useEffect(() => {
+    mountedRef.current = true
+    load()
+    return () => { mountedRef.current = false }
+  }, [id])
 
   async function handleSaveEdit(e: FormEvent) {
     e.preventDefault()
