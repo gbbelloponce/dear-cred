@@ -19,7 +19,9 @@ const clients = new Hono<AppEnv>()
 clients.use('/clients/*', authMiddleware)
 
 clients.get('/clients', async (c) => {
+  const userId = c.get('user').id
   const data = await prisma.client.findMany({
+    where: { userId },
     orderBy: { lastName: 'asc' },
     include: {
       loans: {
@@ -40,13 +42,14 @@ clients.get('/clients', async (c) => {
 
 clients.post('/clients', zValidator('json', createClientSchema), async (c) => {
   const body = c.req.valid('json')
-  const client = await prisma.client.create({ data: body })
+  const userId = c.get('user').id
+  const client = await prisma.client.create({ data: { ...body, userId } })
   return c.json(client, 201)
 })
 
 clients.get('/clients/:id', async (c) => {
-  const client = await prisma.client.findUniqueOrThrow({
-    where: { id: c.req.param('id') },
+  const client = await prisma.client.findFirstOrThrow({
+    where: { id: c.req.param('id'), userId: c.get('user').id },
     include: {
       loans: {
         orderBy: { createdAt: 'desc' },
@@ -64,11 +67,10 @@ clients.get('/clients/:id', async (c) => {
 })
 
 clients.put('/clients/:id', zValidator('json', createClientSchema.partial()), async (c) => {
+  const id = c.req.param('id')
   const body = c.req.valid('json')
-  const client = await prisma.client.update({
-    where: { id: c.req.param('id') },
-    data: body,
-  })
+  await prisma.client.findFirstOrThrow({ where: { id, userId: c.get('user').id } })
+  const client = await prisma.client.update({ where: { id }, data: body })
   return c.json(client)
 })
 

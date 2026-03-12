@@ -23,7 +23,7 @@ loans.use('/loans/:id/nullify', authMiddleware)
 
 loans.get('/clients/:id/loans', async (c) => {
   const data = await prisma.loan.findMany({
-    where: { clientId: c.req.param('id') },
+    where: { clientId: c.req.param('id'), client: { userId: c.get('user').id } },
     orderBy: { createdAt: 'desc' },
     include: {
       installments: {
@@ -40,7 +40,7 @@ loans.post('/clients/:id/loans', zValidator('json', createLoanSchema), async (c)
   const body = c.req.valid('json')
 
   const activeLoan = await prisma.loan.findFirst({
-    where: { clientId, status: { in: ['ACTIVE', 'OVERDUE'] } },
+    where: { clientId, status: { in: ['ACTIVE', 'OVERDUE'] }, client: { userId: c.get('user').id } },
   })
   if (activeLoan) {
     throw new HTTPException(409, { message: 'Client already has an active loan' })
@@ -78,8 +78,8 @@ loans.post('/clients/:id/loans', zValidator('json', createLoanSchema), async (c)
 })
 
 loans.get('/loans/:id', async (c) => {
-  const loan = await prisma.loan.findUniqueOrThrow({
-    where: { id: c.req.param('id') },
+  const loan = await prisma.loan.findFirstOrThrow({
+    where: { id: c.req.param('id'), client: { userId: c.get('user').id } },
     include: {
       client: true,
       installments: {
@@ -99,7 +99,7 @@ loans.post('/loans/:id/nullify', zValidator('json', nullifySchema), async (c) =>
   const id = c.req.param('id')
   const { voidPayments } = c.req.valid('json')
 
-  const loan = await prisma.loan.findUniqueOrThrow({ where: { id } })
+  const loan = await prisma.loan.findFirstOrThrow({ where: { id, client: { userId: c.get('user').id } } })
 
   if (loan.status !== 'ACTIVE' && loan.status !== 'OVERDUE') {
     throw new HTTPException(409, { message: 'Only ACTIVE or OVERDUE loans can be nullified' })

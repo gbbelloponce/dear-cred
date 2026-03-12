@@ -1,14 +1,16 @@
 model Client {
   id        String   @id @default(cuid())
+  userId    String
   firstName String
   lastName  String
   phone     String
   address   String
-  dni       String   @unique
+  dni       String
   notes     String?
   createdAt DateTime @default(now())
 
-  loans     Loan[]
+  loans Loan[]
 
+  @@unique([dni, userId])
   @@map("clients")
 }

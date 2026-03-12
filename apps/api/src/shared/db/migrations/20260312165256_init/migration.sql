@@ -1,14 +1,8 @@
-/*
-  Warnings:
-
-  - Added the required column `address` to the `clients` table without a default value. This is not possible if the table is not empty.
-
-*/
 -- CreateEnum
 CREATE TYPE "Frequency" AS ENUM ('DAILY', 'WEEKLY', 'MONTHLY');
 
 -- CreateEnum
-CREATE TYPE "LoanStatus" AS ENUM ('ACTIVE', 'COMPLETED', 'OVERDUE');
+CREATE TYPE "LoanStatus" AS ENUM ('ACTIVE', 'COMPLETED', 'OVERDUE', 'NULLIFIED');
 
 -- CreateEnum
 CREATE TYPE "InstallmentStatus" AS ENUM ('PENDING', 'PAID', 'PARTIALLY_PAID', 'LATE_PAID', 'OVERDUE');
@@ -16,9 +10,20 @@ CREATE TYPE "InstallmentStatus" AS ENUM ('PENDING', 'PAID', 'PARTIALLY_PAID', 'L
 -- CreateEnum
 CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER');
 
--- AlterTable
-ALTER TABLE "clients" ADD COLUMN     "address" TEXT NOT NULL,
-ADD COLUMN     "notes" TEXT;
+-- CreateTable
+CREATE TABLE "clients" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "firstName" TEXT NOT NULL,
+    "lastName" TEXT NOT NULL,
+    "phone" TEXT NOT NULL,
+    "address" TEXT NOT NULL,
+    "dni" TEXT NOT NULL,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "clients_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "installments" (
@@ -29,6 +34,7 @@ CREATE TABLE "installments" (
     "amount" DOUBLE PRECISION NOT NULL,
     "status" "InstallmentStatus" NOT NULL DEFAULT 'PENDING',
     "isPenalty" BOOLEAN NOT NULL DEFAULT false,
+    "penaltySourceId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "installments_pkey" PRIMARY KEY ("id")
@@ -58,12 +64,19 @@ CREATE TABLE "payments" (
     "amount" DOUBLE PRECISION NOT NULL,
     "paymentDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "method" "PaymentMethod" NOT NULL,
+    "isVoided" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateIndex
+CREATE UNIQUE INDEX "clients_dni_userId_key" ON "clients"("dni", "userId");
+
 -- AddForeignKey
 ALTER TABLE "installments" ADD CONSTRAINT "installments_loanId_fkey" FOREIGN KEY ("loanId") REFERENCES "loans"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "installments" ADD CONSTRAINT "installments_penaltySourceId_fkey" FOREIGN KEY ("penaltySourceId") REFERENCES "installments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "loans" ADD CONSTRAINT "loans_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

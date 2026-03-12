@@ -27,8 +27,8 @@ installments.post('/:id/payments', zValidator('json', paymentSchema), async (c) 
   const id = c.req.param('id')
   const { amount, method, paymentDate } = c.req.valid('json')
 
-  const installment = await prisma.installment.findUniqueOrThrow({
-    where: { id },
+  const installment = await prisma.installment.findFirstOrThrow({
+    where: { id, loan: { client: { userId: c.get('user').id } } },
     include: {
       payments: true,
       loan: { select: { id: true, installmentAmount: true, frequency: true, status: true } },
@@ -105,8 +105,8 @@ installments.patch('/:id/resolve', zValidator('json', resolveSchema), async (c) 
   const id = c.req.param('id')
   const { method, paymentDate } = c.req.valid('json')
 
-  const installment = await prisma.installment.findUniqueOrThrow({
-    where: { id },
+  const installment = await prisma.installment.findFirstOrThrow({
+    where: { id, loan: { client: { userId: c.get('user').id } } },
     include: {
       payments: true,
       loan: { select: { id: true } },
@@ -147,8 +147,8 @@ installments.use('/:id', authMiddleware)
 installments.delete('/:id', async (c) => {
   const id = c.req.param('id')
 
-  const installment = await prisma.installment.findUniqueOrThrow({
-    where: { id },
+  const installment = await prisma.installment.findFirstOrThrow({
+    where: { id, loan: { client: { userId: c.get('user').id } } },
     include: { loan: { select: { id: true, status: true } } },
   })
 

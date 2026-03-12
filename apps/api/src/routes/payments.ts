@@ -11,8 +11,8 @@ payments.use('/:id/void', authMiddleware)
 payments.post('/:id/void', async (c) => {
   const id = c.req.param('id')
 
-  const payment = await prisma.payment.findUniqueOrThrow({
-    where: { id },
+  const payment = await prisma.payment.findFirstOrThrow({
+    where: { id, installment: { loan: { client: { userId: c.get('user').id } } } },
     include: {
       installment: {
         include: {

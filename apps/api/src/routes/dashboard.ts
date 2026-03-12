@@ -8,6 +8,7 @@ const dashboard = new Hono<AppEnv>()
 dashboard.use('*', authMiddleware)
 
 dashboard.get('/', async (c) => {
+  const userId = c.get('user').id
   const now = new Date()
   const fromParam = c.req.query('from')
   const toParam = c.req.query('to')
@@ -27,26 +28,26 @@ dashboard.get('/', async (c) => {
     prisma.installment.findMany({
       where: {
         status: { in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'] },
-        loan: { status: { notIn: ['NULLIFIED'] } },
+        loan: { status: { notIn: ['NULLIFIED'] }, client: { userId } },
       },
       select: { amount: true, payments: { select: { amount: true, isVoided: true } } },
     }),
 
     // collected in period
     prisma.payment.aggregate({
-      where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false },
+      where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false, installment: { loan: { client: { userId } } } },
       _sum: { amount: true },
     }),
 
     // overdueClients
     prisma.installment.findMany({
-      where: { status: 'OVERDUE', loan: { status: { notIn: ['NULLIFIED'] } } },
+      where: { status: 'OVERDUE', loan: { status: { notIn: ['NULLIFIED'] }, client: { userId } } },
       select: { loan: { select: { client: { select: { id: true, firstName: true, lastName: true } } } } },
     }),
 
     // for onTimeRate and debtPerClient
     prisma.loan.findMany({
-      where: { status: { in: ['ACTIVE', 'OVERDUE'] } },
+      where: { status: { in: ['ACTIVE', 'OVERDUE'] }, client: { userId } },
       select: {
         id: true,
         client: { select: { id: true, firstName: true, lastName: true } },
@@ -59,7 +60,7 @@ dashboard.get('/', async (c) => {
     // cashVsTransfer in period
     prisma.payment.groupBy({
       by: ['method'],
-      where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false },
+      where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false, installment: { loan: { client: { userId } } } },
       _sum: { amount: true },
     }),
   ])
