@@ -58,8 +58,7 @@ function fmt(n: number) {
 
 function fmtDate(iso: string) {
   const d = new Date(iso)
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12))
-    .toLocaleDateString('es-AR')
+  return `${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}`
 }
 
 function paidAmount(inst: Installment) {
