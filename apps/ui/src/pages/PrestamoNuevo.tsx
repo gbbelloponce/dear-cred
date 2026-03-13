@@ -51,7 +51,7 @@ export default function PrestamoNuevo() {
         interestRate: rateNum,
         installmentCount: countNum,
         frequency,
-        startDate: new Date(startDate).toISOString(),
+        startDate: `${startDate}T20:00:00.000Z`,
       })
       navigate(`/clientes/${clientId}`)
     } catch (err) {

@@ -57,7 +57,9 @@ function fmt(n: number) {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-AR')
+  const d = new Date(iso)
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12))
+    .toLocaleDateString('es-AR')
 }
 
 function paidAmount(inst: Installment) {
