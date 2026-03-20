@@ -5,6 +5,7 @@ import { HTTPException } from 'hono/http-exception'
 import { prisma } from '../shared/db/index.ts'
 import { authMiddleware } from '../middleware/auth.ts'
 import { appendPenaltyInstallment, checkLoanCompletion, restoreActiveLoanStatus } from '../lib/loanService.ts'
+import { determinePaymentStatus } from '../lib/paymentUtils.ts'
 import type { AppEnv } from '../lib/types.ts'
 
 const paymentSchema = z.object({
@@ -48,17 +49,7 @@ installments.post('/:id/payments', zValidator('json', paymentSchema), async (c) 
   }
 
   const effectiveDate = paymentDate ? new Date(paymentDate) : new Date()
-  const isOverdue = effectiveDate > installment.dueDate
-  const isPartial = amount < installment.amount
-
-  let newStatus: 'PAID' | 'LATE_PAID' | 'PARTIALLY_PAID'
-  if (isPartial) {
-    newStatus = 'PARTIALLY_PAID'
-  } else if (isOverdue) {
-    newStatus = 'LATE_PAID'
-  } else {
-    newStatus = 'PAID'
-  }
+  const newStatus = determinePaymentStatus(amount, installment.amount, effectiveDate, installment.dueDate)
 
   await prisma.$transaction(async (tx) => {
     await tx.payment.create({

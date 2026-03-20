@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { prisma } from '../shared/db/index.ts'
 import { authMiddleware } from '../middleware/auth.ts'
+import { recalculateStatusAfterVoid } from '../lib/paymentUtils.ts'
 import type { AppEnv } from '../lib/types.ts'
 
 const payments = new Hono<AppEnv>()
@@ -36,21 +37,13 @@ payments.post('/:id/void', async (c) => {
 
   await prisma.payment.update({ where: { id }, data: { isVoided: true } })
 
-  // Recalculate installment status from remaining non-voided payments
-  const remaining = installment.payments.filter((p) => p.id !== id && !p.isVoided)
-  const sum = remaining.reduce((acc, p) => acc + p.amount, 0)
-
-  let newStatus: string
-  if (sum <= 0) {
-    newStatus = installment.dueDate < now ? 'OVERDUE' : 'PENDING'
-  } else if (sum < installment.amount) {
-    newStatus = 'PARTIALLY_PAID'
-  } else {
-    const latestPayment = remaining.sort(
-      (a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime(),
-    )[0]
-    newStatus = new Date(latestPayment.paymentDate) <= installment.dueDate ? 'PAID' : 'LATE_PAID'
-  }
+  const newStatus = recalculateStatusAfterVoid(
+    installment.payments,
+    id,
+    installment.amount,
+    installment.dueDate,
+    now,
+  )
 
   await prisma.installment.update({
     where: { id: installment.id },
