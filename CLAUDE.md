@@ -497,11 +497,18 @@ bun run lint
 bun install
 bun run dev           # Hono dev server
 
-# Database
-bunx prisma migrate dev       # run migrations
-bunx prisma studio            # local DB browser
-bunx prisma generate          # regenerate client after schema changes
+# Database (run from apps/api/)
+bun run db:migrate:dev        # creates migration SQL file only — NEVER touches the DB
+bun run db:migrate:prod       # applies pending migrations to production (uses .env.prod)
+bun run db:generate           # regenerate Prisma client after schema changes
+bun run db:studio             # local DB browser
 ```
+
+> **IMPORTANT — migration rules:**
+> - **Never** run `prisma migrate dev` (without `--create-only`), `prisma db execute`, or `prisma db push` directly — these hit the production Supabase DB and can prompt a destructive reset.
+> - **Never** manually patch the `_prisma_migrations` table.
+> - Always use the two-step workflow: `db:migrate:dev` to create the SQL file, then `db:migrate:prod` to apply it to production.
+> - After any schema change, run `db:generate` to regenerate the Prisma client.
 
 ### Dependencies
 
