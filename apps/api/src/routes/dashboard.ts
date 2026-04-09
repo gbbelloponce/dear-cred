@@ -33,9 +33,9 @@ dashboard.get('/', async (c) => {
       select: { amount: true, payments: { select: { amount: true, isVoided: true } } },
     }),
 
-    // collected in period
+    // collected in period (includes payments from deleted clients — money was received)
     prisma.payment.aggregate({
-      where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false, installment: { loan: { client: { userId, deletedAt: null } } } },
+      where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false, installment: { loan: { client: { userId } } } },
       _sum: { amount: true },
     }),
 
@@ -57,10 +57,10 @@ dashboard.get('/', async (c) => {
       },
     }),
 
-    // cashVsTransfer in period
+    // cashVsTransfer in period (includes payments from deleted clients — money was received)
     prisma.payment.groupBy({
       by: ['method'],
-      where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false, installment: { loan: { client: { userId, deletedAt: null } } } },
+      where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false, installment: { loan: { client: { userId } } } },
       _sum: { amount: true },
     }),
   ])

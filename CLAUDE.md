@@ -184,14 +184,15 @@ datasource db {
 
 ```prisma
 model Client {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   firstName String
   lastName  String
   phone     String
   address   String
-  dni       String   @unique
+  dni       String    @unique
   notes     String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?            // null = active; set = soft-deleted
   loans     Loan[]
 }
 
@@ -323,6 +324,17 @@ OVERDUE → LATE_PAID      (paid in full after being overdue)
 - After deletion, all subsequent installment `number` values are decremented by 1 to keep the sequence contiguous
 - After renumbering, loan completion and status are re-evaluated
 
+### Client Soft Delete
+- Clients are never hard-deleted — `deletedAt` is set to the current timestamp
+- **Guard:** clients with an `ACTIVE` or `OVERDUE` loan cannot be deleted; admin must nullify the loan first
+- Soft-deleted clients are excluded from:
+  - The client list (`GET /clients` filters `deletedAt: null` by default; pass `?includeDeleted=true` to include them)
+  - All dashboard debt/overdue metrics: `totalOwed`, `overdueClients`, `onTimeRate`, `debtPerClient`
+  - The overdue cron (their installments are not processed)
+- Soft-deleted clients are **included** in `collectedThisMonth` and `cashVsTransfer` — payments already received still count
+- Deleted clients can be viewed read-only by navigating to `/clientes/:id` directly
+- The client list has an "Eliminados" toggle that reveals soft-deleted clients in a separate dashed section
+
 ---
 
 ## API Routes (REST)
@@ -331,10 +343,12 @@ OVERDUE → LATE_PAID      (paid in full after being overdue)
 POST   /auth/login
 POST   /auth/logout
 
-GET    /clients                       # list with active loan summary
+GET    /clients                       # list with active loan summary (excludes soft-deleted by default)
+GET    /clients?includeDeleted=true   # list including soft-deleted clients
 POST   /clients                       # create client
-GET    /clients/:id                   # detail + full loan history
+GET    /clients/:id                   # detail + full loan history (works for deleted clients too)
 PUT    /clients/:id                   # edit client
+DELETE /clients/:id                   # soft-delete client (sets deletedAt); blocked if active/overdue loan exists
 
 GET    /clients/:id/loans             # loan history
 POST   /clients/:id/loans             # create loan (only if no active loan)
@@ -401,12 +415,12 @@ e.g. `2026-04-09T02:55:00Z` − 3h = `2026-04-08T23:55:00Z` → displays "8/4/20
 
 | Key                | Description                                              |
 |--------------------|----------------------------------------------------------|
-| `totalOwed`        | Sum of all pending balances across all active loans      |
-| `collectedThisMonth` | Sum of all payments in the current calendar month      |
-| `overdueClients`   | Clients with at least one OVERDUE installment            |
-| `onTimeRate`       | % of clients with no overdue installments                |
-| `cashVsTransfer`   | Total collected split by payment method                  |
-| `debtPerClient`    | Remaining debt breakdown per client                      |
+| `totalOwed`        | Sum of all pending balances across all active loans (excludes soft-deleted clients) |
+| `collectedThisMonth` | Sum of all non-voided payments in the current calendar month (**includes** payments from soft-deleted clients — money was received) |
+| `overdueClients`   | Clients with at least one OVERDUE installment (excludes soft-deleted clients)       |
+| `onTimeRate`       | % of clients with no overdue installments (excludes soft-deleted clients)           |
+| `cashVsTransfer`   | Total collected split by payment method (**includes** payments from soft-deleted clients) |
+| `debtPerClient`    | Remaining debt breakdown per client (excludes soft-deleted clients)                 |
 
 ---
 
@@ -445,6 +459,7 @@ e.g. `2026-04-09T02:55:00Z` − 3h = `2026-04-08T23:55:00Z` → displays "8/4/20
 - Loan is `COMPLETED` only when all installments are `PAID` or `LATE_PAID`
 - Voided payments (`isVoided: true`) are excluded from all dashboard collected/cashVsTransfer stats
 - NULLIFIED loans are excluded from all dashboard debt/overdue stats
+- Soft-deleted clients (`deletedAt` set) are excluded from debt/overdue dashboard stats and the overdue cron, but their payments still count in `collectedThisMonth` and `cashVsTransfer`
 - No payments or installment changes allowed on COMPLETED or NULLIFIED loans
 - Penalty installments track their source via `penaltySourceId` (nullable FK to the installment that triggered the penalty)
 - No file uploads — notes/observations are plain text only
