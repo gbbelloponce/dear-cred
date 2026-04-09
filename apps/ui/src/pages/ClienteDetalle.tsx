@@ -226,13 +226,13 @@ export default function ClienteDetalle() {
   // Payment form
   const [payingId, setPayingId] = useState<string | null>(null)
   const [payAmount, setPayAmount] = useState('')
-  const [payMethod, setPayMethod] = useState<PaymentMethod>('CASH')
+  const [payMethod, setPayMethod] = useState<PaymentMethod>('TRANSFER')
   const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [payLoading, setPayLoading] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
 
   // Resolve form
-  const [resolveMethod, setResolveMethod] = useState<PaymentMethod>('CASH')
+  const [resolveMethod, setResolveMethod] = useState<PaymentMethod>('TRANSFER')
   const [resolveDate, setResolveDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [resolvingId, setResolvingId] = useState<string | null>(null)
 
@@ -292,7 +292,7 @@ export default function ClienteDetalle() {
   function startPaying(inst: Installment) {
     setPayingId(inst.id)
     setPayAmount('')
-    setPayMethod('CASH')
+    setPayMethod('TRANSFER')
     setPayDate(new Date().toISOString().slice(0, 10))
     setPayError(null)
   }

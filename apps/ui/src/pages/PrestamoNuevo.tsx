@@ -11,6 +11,7 @@ import { api, type Frequency } from '@/services/api'
 const FREQUENCY_LABEL: Record<Frequency, string> = {
   DAILY: 'Diaria',
   WEEKLY: 'Semanal',
+  FORTNIGHTLY: 'Quincenal',
   MONTHLY: 'Mensual',
 }
 

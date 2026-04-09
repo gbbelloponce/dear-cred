@@ -12,6 +12,7 @@
 export const Frequency = {
   DAILY: 'DAILY',
   WEEKLY: 'WEEKLY',
+  FORTNIGHTLY: 'FORTNIGHTLY',
   MONTHLY: 'MONTHLY'
 } as const
 

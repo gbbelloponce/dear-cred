@@ -38,7 +38,7 @@ export type ClientSummary = {
 }
 
 export type PaymentMethod = 'CASH' | 'TRANSFER'
-export type Frequency = 'DAILY' | 'WEEKLY' | 'MONTHLY'
+export type Frequency = 'DAILY' | 'WEEKLY' | 'FORTNIGHTLY' | 'MONTHLY'
 export type InstallmentStatus = 'PENDING' | 'PAID' | 'PARTIALLY_PAID' | 'LATE_PAID' | 'OVERDUE'
 export type LoanStatus = 'ACTIVE' | 'COMPLETED' | 'OVERDUE' | 'NULLIFIED'
 

@@ -1,6 +1,7 @@
 enum Frequency {
   DAILY
   WEEKLY
+  FORTNIGHTLY
   MONTHLY
 }
 
