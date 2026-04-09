@@ -239,6 +239,7 @@ model Payment {
 enum Frequency {
   DAILY
   WEEKLY
+  FORTNIGHTLY
   MONTHLY
 }
 
@@ -247,6 +248,7 @@ enum LoanStatus {
   COMPLETED
   OVERDUE
   NULLIFIED  // admin-cancelled loan
+  FROZEN     // payments paused by admin; overdue cron skipped; debt still counted
 }
 
 enum InstallmentStatus {
@@ -324,6 +326,17 @@ OVERDUE → LATE_PAID      (paid in full after being overdue)
 - After deletion, all subsequent installment `number` values are decremented by 1 to keep the sequence contiguous
 - After renumbering, loan completion and status are re-evaluated
 
+### Loan Freeze
+- Admin can freeze an `ACTIVE` or `OVERDUE` loan → status becomes `FROZEN`
+- **Overdue cron skips FROZEN loans** — no installments marked OVERDUE, no penalties appended
+- **Payments are still allowed** on a FROZEN loan
+- **Nullification is allowed** on a FROZEN loan
+- **A new loan cannot be created** for a client with a FROZEN loan (same guard as ACTIVE/OVERDUE)
+- Any OVERDUE installments that existed before freezing remain OVERDUE — freeze doesn't clear them
+- **Unfreezing:** if any installment is currently OVERDUE → loan reverts to `OVERDUE`; otherwise → `ACTIVE`
+- FROZEN loan debt appears in `totalOwed` and `debtPerClient` — the money is still owed
+- FROZEN loans with OVERDUE installments appear in `overdueClients`
+
 ### Client Soft Delete
 - Clients are never hard-deleted — `deletedAt` is set to the current timestamp
 - **Guard:** clients with an `ACTIVE` or `OVERDUE` loan cannot be deleted; admin must nullify the loan first
@@ -358,7 +371,9 @@ POST   /installments/:id/payments     # register full or partial payment
 PATCH  /installments/:id/resolve      # fully resolve a PARTIALLY_PAID installment
 DELETE /installments/:id              # delete a PENDING penalty installment (renumbers subsequent)
 
-POST   /loans/:id/nullify             # nullify ACTIVE or OVERDUE loan; optional body { voidPayments?: boolean }
+POST   /loans/:id/nullify             # nullify ACTIVE, OVERDUE, or FROZEN loan; optional body { voidPayments?: boolean }
+POST   /loans/:id/freeze              # freeze ACTIVE or OVERDUE loan → FROZEN
+POST   /loans/:id/unfreeze            # unfreeze FROZEN loan → ACTIVE or OVERDUE (based on installment states)
 POST   /payments/:id/void             # void a single payment; recalculates installment status
 
 GET    /dashboard                     # aggregated business metrics
@@ -460,6 +475,7 @@ e.g. `2026-04-09T02:55:00Z` − 3h = `2026-04-08T23:55:00Z` → displays "8/4/20
 - Voided payments (`isVoided: true`) are excluded from all dashboard collected/cashVsTransfer stats
 - NULLIFIED loans are excluded from all dashboard debt/overdue stats
 - Soft-deleted clients (`deletedAt` set) are excluded from debt/overdue dashboard stats and the overdue cron, but their payments still count in `collectedThisMonth` and `cashVsTransfer`
+- FROZEN loans are excluded from the overdue cron but included in all dashboard debt metrics
 - No payments or installment changes allowed on COMPLETED or NULLIFIED loans
 - Penalty installments track their source via `penaltySourceId` (nullable FK to the installment that triggered the penalty)
 - No file uploads — notes/observations are plain text only
