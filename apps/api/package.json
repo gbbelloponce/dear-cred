@@ -5,7 +5,7 @@
     "test": "bun test",
     "dev": "bun run --hot src/index.ts",
     "db:generate": "prisma generate",
-    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:dev": "prisma migrate dev --create-only",
     "db:migrate:prod": "PRISMA_ENV_FILE=.env.prod prisma migrate deploy",
     "db:studio": "prisma studio",
     "start": "bun src/index.ts"

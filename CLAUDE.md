@@ -360,13 +360,14 @@ POST   /internal/process-overdue      # called by cron-job.org — requires x-in
 **Conversion rule:** Argentina time = UTC − 3h → e.g. 5:00 PM ARG = 20:00 UTC
 
 ### Due Dates
-All installment due dates are stored in PostgreSQL as UTC timestamps at **20:00 UTC** (= 5:00 PM Argentina).
-Computed via `Date.UTC(y, m, d, 20, 0, 0)` in `dateUtils.ts`.
-This means: on the calendar day of the due date, the client has until 5:00 PM local time to pay.
+All installment due dates are stored in PostgreSQL as UTC timestamps at **02:55 UTC the next calendar day** (= 23:55 ARG).
+e.g. April 8 ARG deadline → stored as `2026-04-09T02:55:00Z`.
+Computed via `Date.UTC(y, m, d + 1, 2, 55, 0)` in `dateUtils.ts` (the `+1` pushes to the next UTC day).
+This means: on the calendar day of the due date, the client has until 11:55 PM local time to pay.
 
 ### Cron Job Timing
-The cron runs at **20:05 UTC = 5:05 PM Argentina** — 5 minutes after the client deadline.
-At that moment: `now()` = 20:05 UTC > 20:00 UTC (today's due dates) → the overdue query fires correctly.
+The cron runs at **02:58 UTC = 23:58 ARG** — 3 minutes after the client deadline.
+At that moment: `now()` = 02:58 UTC > 02:55 UTC (today's due dates) → the overdue query fires correctly.
 Query: `WHERE status = 'PENDING' AND dueDate < now()` catches all today's unpaid installments.
 
 ### Payment Date Comparison
@@ -374,24 +375,25 @@ In `installments.ts`, `effectiveDate > installment.dueDate` determines PAID vs L
 `effectiveDate` is either the provided `paymentDate` (ISO string → UTC) or `new Date()` (server UTC).
 
 ### Frontend Display
-Dates are displayed via `toLocaleDateString('es-AR')` — the browser renders them in local Argentina time.
+`fmtDate` subtracts 3h from the stored UTC timestamp before extracting date components, converting back to ARG calendar date.
+e.g. `2026-04-09T02:55:00Z` − 3h = `2026-04-08T23:55:00Z` → displays "8/4/2026".
 
 ---
 
 ## Scheduled Jobs
 
 **Service:** [cron-job.org](https://cron-job.org) (free tier)
-**Schedule:** Daily at 20:05 UTC (5:05 PM Argentina / UTC-3)
+**Schedule:** Daily at 02:58 UTC (23:58 ARG / UTC-3)
 **Endpoint:** `POST /internal/process-overdue`
 **Auth:** `x-internal-secret` header validated against `INTERNAL_CRON_SECRET` env var — return 401 immediately if mismatch
 
-**Optional body:** `{ "asOf": "<ISO datetime>" }` — overrides the reference time used for the overdue query. Defaults to `new Date()` when omitted. Useful for manual testing during the day without waiting for 20:05 UTC.
+**Optional body:** `{ "asOf": "<ISO datetime>" }` — overrides the reference time used for the overdue query. Defaults to `new Date()` when omitted. Useful for manual testing during the day without waiting for 02:58 UTC.
 
 **cron-job.org setup:**
 - URL: `https://api-production-e92a.up.railway.app/internal/process-overdue`
 - Method: `POST`
 - Custom header: `x-internal-secret: <your secret>`
-- Schedule: daily at 20:05 UTC
+- Schedule: daily at 02:58 UTC
 
 ---
 

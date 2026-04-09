@@ -57,7 +57,8 @@ function fmt(n: number) {
 }
 
 function fmtDate(iso: string) {
-  const d = new Date(iso)
+  // Due dates are stored at 02:55 UTC = 23:55 ARG (UTC-3). Subtract 3h to get the ARG calendar date.
+  const d = new Date(new Date(iso).getTime() - 3 * 60 * 60 * 1000)
   return `${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}`
 }
 
