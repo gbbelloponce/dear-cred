@@ -34,6 +34,7 @@ export type ClientMinAggregateOutputType = {
   dni: string | null
   notes: string | null
   createdAt: Date | null
+  deletedAt: Date | null
 }
 
 export type ClientMaxAggregateOutputType = {
@@ -46,6 +47,7 @@ export type ClientMaxAggregateOutputType = {
   dni: string | null
   notes: string | null
   createdAt: Date | null
+  deletedAt: Date | null
 }
 
 export type ClientCountAggregateOutputType = {
@@ -58,6 +60,7 @@ export type ClientCountAggregateOutputType = {
   dni: number
   notes: number
   createdAt: number
+  deletedAt: number
   _all: number
 }
 
@@ -72,6 +75,7 @@ export type ClientMinAggregateInputType = {
   dni?: true
   notes?: true
   createdAt?: true
+  deletedAt?: true
 }
 
 export type ClientMaxAggregateInputType = {
@@ -84,6 +88,7 @@ export type ClientMaxAggregateInputType = {
   dni?: true
   notes?: true
   createdAt?: true
+  deletedAt?: true
 }
 
 export type ClientCountAggregateInputType = {
@@ -96,6 +101,7 @@ export type ClientCountAggregateInputType = {
   dni?: true
   notes?: true
   createdAt?: true
+  deletedAt?: true
   _all?: true
 }
 
@@ -181,6 +187,7 @@ export type ClientGroupByOutputType = {
   dni: string
   notes: string | null
   createdAt: Date
+  deletedAt: Date | null
   _count: ClientCountAggregateOutputType | null
   _min: ClientMinAggregateOutputType | null
   _max: ClientMaxAggregateOutputType | null
@@ -214,6 +221,7 @@ export type ClientWhereInput = {
   dni?: Prisma.StringFilter<"Client"> | string
   notes?: Prisma.StringNullableFilter<"Client"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Client"> | Date | string
+  deletedAt?: Prisma.DateTimeNullableFilter<"Client"> | Date | string | null
   loans?: Prisma.LoanListRelationFilter
 }
 
@@ -227,6 +235,7 @@ export type ClientOrderByWithRelationInput = {
   dni?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   loans?: Prisma.LoanOrderByRelationAggregateInput
 }
 
@@ -244,6 +253,7 @@ export type ClientWhereUniqueInput = Prisma.AtLeast<{
   dni?: Prisma.StringFilter<"Client"> | string
   notes?: Prisma.StringNullableFilter<"Client"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Client"> | Date | string
+  deletedAt?: Prisma.DateTimeNullableFilter<"Client"> | Date | string | null
   loans?: Prisma.LoanListRelationFilter
 }, "id" | "dni_userId">
 
@@ -257,6 +267,7 @@ export type ClientOrderByWithAggregationInput = {
   dni?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.ClientCountOrderByAggregateInput
   _max?: Prisma.ClientMaxOrderByAggregateInput
   _min?: Prisma.ClientMinOrderByAggregateInput
@@ -275,6 +286,7 @@ export type ClientScalarWhereWithAggregatesInput = {
   dni?: Prisma.StringWithAggregatesFilter<"Client"> | string
   notes?: Prisma.StringNullableWithAggregatesFilter<"Client"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Client"> | Date | string
+  deletedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Client"> | Date | string | null
 }
 
 export type ClientCreateInput = {
@@ -287,6 +299,7 @@ export type ClientCreateInput = {
   dni: string
   notes?: string | null
   createdAt?: Date | string
+  deletedAt?: Date | string | null
   loans?: Prisma.LoanCreateNestedManyWithoutClientInput
 }
 
@@ -300,6 +313,7 @@ export type ClientUncheckedCreateInput = {
   dni: string
   notes?: string | null
   createdAt?: Date | string
+  deletedAt?: Date | string | null
   loans?: Prisma.LoanUncheckedCreateNestedManyWithoutClientInput
 }
 
@@ -313,6 +327,7 @@ export type ClientUpdateInput = {
   dni?: Prisma.StringFieldUpdateOperationsInput | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loans?: Prisma.LoanUpdateManyWithoutClientNestedInput
 }
 
@@ -326,6 +341,7 @@ export type ClientUncheckedUpdateInput = {
   dni?: Prisma.StringFieldUpdateOperationsInput | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loans?: Prisma.LoanUncheckedUpdateManyWithoutClientNestedInput
 }
 
@@ -339,6 +355,7 @@ export type ClientCreateManyInput = {
   dni: string
   notes?: string | null
   createdAt?: Date | string
+  deletedAt?: Date | string | null
 }
 
 export type ClientUpdateManyMutationInput = {
@@ -351,6 +368,7 @@ export type ClientUpdateManyMutationInput = {
   dni?: Prisma.StringFieldUpdateOperationsInput | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type ClientUncheckedUpdateManyInput = {
@@ -363,6 +381,7 @@ export type ClientUncheckedUpdateManyInput = {
   dni?: Prisma.StringFieldUpdateOperationsInput | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type ClientDniUserIdCompoundUniqueInput = {
@@ -380,6 +399,7 @@ export type ClientCountOrderByAggregateInput = {
   dni?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
 }
 
 export type ClientMaxOrderByAggregateInput = {
@@ -392,6 +412,7 @@ export type ClientMaxOrderByAggregateInput = {
   dni?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
 }
 
 export type ClientMinOrderByAggregateInput = {
@@ -404,6 +425,7 @@ export type ClientMinOrderByAggregateInput = {
   dni?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
 }
 
 export type ClientScalarRelationFilter = {
@@ -421,6 +443,10 @@ export type NullableStringFieldUpdateOperationsInput = {
 
 export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
+}
+
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
 }
 
 export type ClientCreateNestedOneWithoutLoansInput = {
@@ -447,6 +473,7 @@ export type ClientCreateWithoutLoansInput = {
   dni: string
   notes?: string | null
   createdAt?: Date | string
+  deletedAt?: Date | string | null
 }
 
 export type ClientUncheckedCreateWithoutLoansInput = {
@@ -459,6 +486,7 @@ export type ClientUncheckedCreateWithoutLoansInput = {
   dni: string
   notes?: string | null
   createdAt?: Date | string
+  deletedAt?: Date | string | null
 }
 
 export type ClientCreateOrConnectWithoutLoansInput = {
@@ -487,6 +515,7 @@ export type ClientUpdateWithoutLoansInput = {
   dni?: Prisma.StringFieldUpdateOperationsInput | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type ClientUncheckedUpdateWithoutLoansInput = {
@@ -499,6 +528,7 @@ export type ClientUncheckedUpdateWithoutLoansInput = {
   dni?: Prisma.StringFieldUpdateOperationsInput | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 
@@ -542,6 +572,7 @@ export type ClientSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   dni?: boolean
   notes?: boolean
   createdAt?: boolean
+  deletedAt?: boolean
   loans?: boolean | Prisma.Client$loansArgs<ExtArgs>
   _count?: boolean | Prisma.ClientCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["client"]>
@@ -556,6 +587,7 @@ export type ClientSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   dni?: boolean
   notes?: boolean
   createdAt?: boolean
+  deletedAt?: boolean
 }, ExtArgs["result"]["client"]>
 
 export type ClientSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -568,6 +600,7 @@ export type ClientSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   dni?: boolean
   notes?: boolean
   createdAt?: boolean
+  deletedAt?: boolean
 }, ExtArgs["result"]["client"]>
 
 export type ClientSelectScalar = {
@@ -580,9 +613,10 @@ export type ClientSelectScalar = {
   dni?: boolean
   notes?: boolean
   createdAt?: boolean
+  deletedAt?: boolean
 }
 
-export type ClientOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "firstName" | "lastName" | "phone" | "address" | "dni" | "notes" | "createdAt", ExtArgs["result"]["client"]>
+export type ClientOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "firstName" | "lastName" | "phone" | "address" | "dni" | "notes" | "createdAt" | "deletedAt", ExtArgs["result"]["client"]>
 export type ClientInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   loans?: boolean | Prisma.Client$loansArgs<ExtArgs>
   _count?: boolean | Prisma.ClientCountOutputTypeDefaultArgs<ExtArgs>
@@ -605,6 +639,7 @@ export type $ClientPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     dni: string
     notes: string | null
     createdAt: Date
+    deletedAt: Date | null
   }, ExtArgs["result"]["client"]>
   composites: {}
 }
@@ -1038,6 +1073,7 @@ export interface ClientFieldRefs {
   readonly dni: Prisma.FieldRef<"Client", 'String'>
   readonly notes: Prisma.FieldRef<"Client", 'String'>
   readonly createdAt: Prisma.FieldRef<"Client", 'DateTime'>
+  readonly deletedAt: Prisma.FieldRef<"Client", 'DateTime'>
 }
     
 

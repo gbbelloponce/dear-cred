@@ -244,6 +244,10 @@ export default function ClienteDetalle() {
   const [nullifyDialog, setNullifyDialog] = useState<{ loanId: string } | null>(null)
   const [nullifyVoidPayments, setNullifyVoidPayments] = useState(false)
 
+  // Delete client dialog
+  const [deleteDialog, setDeleteDialog] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
   // Expanded past loans
   const [expandedLoanIds, setExpandedLoanIds] = useState<Set<string>>(new Set())
 
@@ -374,6 +378,22 @@ export default function ClienteDetalle() {
     })
   }
 
+  async function handleDeleteClient() {
+    if (!id) return
+    setDeleteError(null)
+    try {
+      await api.deleteClient(id)
+      navigate('/clientes')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ''
+      if (msg.includes('409') || msg.includes('active')) {
+        setDeleteError('El cliente tiene un préstamo activo. Anúlelo antes de eliminarlo.')
+      } else {
+        setDeleteError('No se pudo eliminar el cliente. Intentá de nuevo.')
+      }
+    }
+  }
+
   function togglePastLoan(loanId: string) {
     setExpandedLoanIds((prev) => {
       const next = new Set(prev)
@@ -402,18 +422,35 @@ export default function ClienteDetalle() {
         </h1>
       </div>
 
+      {/* Deleted client banner */}
+      {client.deletedAt && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          Este cliente fue eliminado y su información es de solo lectura.
+        </div>
+      )}
+
       {/* Client info card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-base">Datos del cliente</CardTitle>
-          {!editing && (
-            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-              Editar
-            </Button>
+          {!editing && !client.deletedAt && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => { setDeleteError(null); setDeleteDialog(true) }}
+              >
+                Eliminar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                Editar
+              </Button>
+            </div>
           )}
         </CardHeader>
         <CardContent>
-          {editing ? (
+          {editing && !client.deletedAt ? (
             <form onSubmit={handleSaveEdit} className="flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
@@ -680,6 +717,27 @@ export default function ClienteDetalle() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={deleteDialog} onOpenChange={(open) => { if (!open) setDeleteDialog(false) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar este cliente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              El cliente dejará de aparecer en el sistema, pero su historial de préstamos y pagos se conserva.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && <p className="text-sm text-destructive px-1">{deleteError}</p>}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); handleDeleteClient() }}
+            >
+              Eliminar cliente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!nullifyDialog} onOpenChange={(open) => { if (!open) setNullifyDialog(null) }}>
         <AlertDialogContent>

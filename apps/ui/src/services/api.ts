@@ -28,6 +28,7 @@ export type ClientSummary = {
   address: string
   notes: string | null
   createdAt: string
+  deletedAt: string | null
   loans: Array<{
     id: string
     status: string
@@ -85,6 +86,7 @@ export type ClientDetail = {
   address: string
   notes: string | null
   createdAt: string
+  deletedAt: string | null
   loans: LoanWithInstallments[]
 }
 
@@ -98,7 +100,10 @@ export type DashboardData = {
 }
 
 export const api = {
-  getClients: () => apiFetch<ClientSummary[]>('/clients'),
+  getClients: (params?: { includeDeleted?: boolean }) => {
+    const qs = params?.includeDeleted ? '?includeDeleted=true' : ''
+    return apiFetch<ClientSummary[]>(`/clients${qs}`)
+  },
 
   createClient: (body: {
     firstName: string
@@ -123,6 +128,9 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+
+  deleteClient: (id: string) =>
+    apiFetch<ClientDetail>(`/clients/${id}`, { method: 'DELETE' }),
 
   createLoan: (
     clientId: string,

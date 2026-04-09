@@ -20,8 +20,9 @@ clients.use('/clients/*', authMiddleware)
 
 clients.get('/clients', async (c) => {
   const userId = c.get('user').id
+  const includeDeleted = c.req.query('includeDeleted') === 'true'
   const data = await prisma.client.findMany({
-    where: { userId },
+    where: { userId, ...(includeDeleted ? {} : { deletedAt: null }) },
     orderBy: { lastName: 'asc' },
     include: {
       loans: {
@@ -72,6 +73,27 @@ clients.put('/clients/:id', zValidator('json', createClientSchema.partial()), as
   await prisma.client.findFirstOrThrow({ where: { id, userId: c.get('user').id } })
   const client = await prisma.client.update({ where: { id }, data: body })
   return c.json(client)
+})
+
+clients.delete('/clients/:id', async (c) => {
+  const id = c.req.param('id')
+  const userId = c.get('user').id
+
+  const client = await prisma.client.findFirstOrThrow({ where: { id, userId } })
+
+  if (client.deletedAt) {
+    return c.json({ error: 'Client is already deleted' }, 409)
+  }
+
+  const activeLoan = await prisma.loan.findFirst({
+    where: { clientId: id, status: { in: ['ACTIVE', 'OVERDUE'] } },
+  })
+  if (activeLoan) {
+    return c.json({ error: 'El cliente tiene un préstamo activo. Anúlelo antes de eliminar el cliente.' }, 409)
+  }
+
+  const updated = await prisma.client.update({ where: { id }, data: { deletedAt: new Date() } })
+  return c.json(updated)
 })
 
 export default clients

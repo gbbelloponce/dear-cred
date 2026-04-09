@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { UserIcon, Search01Icon } from '@hugeicons/core-free-icons'
+import { UserIcon, Search01Icon, Delete02Icon } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -28,6 +28,9 @@ export default function Clientes() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [showDeleted, setShowDeleted] = useState(false)
+  const [deletedClients, setDeletedClients] = useState<ClientSummary[]>([])
+  const [loadingDeleted, setLoadingDeleted] = useState(false)
 
   useEffect(() => {
     api
@@ -36,6 +39,19 @@ export default function Clientes() {
       .catch(() => setError('No se pudieron cargar los clientes.'))
       .finally(() => setLoading(false))
   }, [])
+
+  async function handleToggleDeleted() {
+    if (!showDeleted && deletedClients.length === 0) {
+      setLoadingDeleted(true)
+      try {
+        const all = await api.getClients({ includeDeleted: true })
+        setDeletedClients(all.filter((c) => c.deletedAt !== null))
+      } finally {
+        setLoadingDeleted(false)
+      }
+    }
+    setShowDeleted((v) => !v)
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -61,9 +77,21 @@ export default function Clientes() {
     <main className="max-w-3xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold">Clientes</h1>
-        <Button size="sm" onClick={() => navigate('/clientes/nuevo')}>
-          Nuevo cliente
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleToggleDeleted}
+            disabled={loadingDeleted}
+            className="text-muted-foreground"
+          >
+            <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />
+            {showDeleted ? 'Ocultar eliminados' : 'Eliminados'}
+          </Button>
+          <Button size="sm" onClick={() => navigate('/clientes/nuevo')}>
+            Nuevo cliente
+          </Button>
+        </div>
       </div>
 
       {!loading && !error && clients.length > 0 && (
@@ -143,6 +171,36 @@ export default function Clientes() {
             </div>
           )}
         </>
+      )}
+
+      {showDeleted && (
+        <div className="mt-8">
+          <p className="text-sm font-medium text-muted-foreground mb-3">Clientes eliminados</p>
+          {deletedClients.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay clientes eliminados.</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {deletedClients.map((client) => (
+                <li
+                  key={client.id}
+                  className="flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer opacity-60"
+                  onClick={() => navigate(`/clientes/${client.id}`)}
+                >
+                  <div className="flex-shrink-0 text-muted-foreground">
+                    <HugeiconsIcon icon={UserIcon} size={20} strokeWidth={2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate line-through text-muted-foreground">
+                      {client.lastName}, {client.firstName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">DNI {client.dni}</p>
+                  </div>
+                  <Badge variant="outline">Eliminado</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </main>
   )
