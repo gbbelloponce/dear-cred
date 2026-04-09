@@ -14,7 +14,7 @@ internal.post('/process-overdue', async (c) => {
   const now = body.asOf ? new Date(body.asOf) : new Date()
 
   const overdueInstallments = await prisma.installment.findMany({
-    where: { status: 'PENDING', dueDate: { lt: now }, loan: { status: { notIn: ['NULLIFIED'] }, client: { deletedAt: null } } },
+    where: { status: 'PENDING', dueDate: { lt: now }, loan: { status: { notIn: ['NULLIFIED', 'FROZEN'] }, client: { deletedAt: null } } },
     include: {
       loan: { select: { id: true, installmentAmount: true, frequency: true, status: true } },
     },

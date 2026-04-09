@@ -41,7 +41,7 @@ export type ClientSummary = {
 export type PaymentMethod = 'CASH' | 'TRANSFER'
 export type Frequency = 'DAILY' | 'WEEKLY' | 'FORTNIGHTLY' | 'MONTHLY'
 export type InstallmentStatus = 'PENDING' | 'PAID' | 'PARTIALLY_PAID' | 'LATE_PAID' | 'OVERDUE'
-export type LoanStatus = 'ACTIVE' | 'COMPLETED' | 'OVERDUE' | 'NULLIFIED'
+export type LoanStatus = 'ACTIVE' | 'COMPLETED' | 'OVERDUE' | 'NULLIFIED' | 'FROZEN'
 
 export type Payment = {
   id: string
@@ -172,6 +172,12 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body ?? {}),
     }),
+
+  freezeLoan: (loanId: string) =>
+    apiFetch<{ id: string; status: LoanStatus }>(`/loans/${loanId}/freeze`, { method: 'POST' }),
+
+  unfreezeLoan: (loanId: string) =>
+    apiFetch<{ id: string; status: LoanStatus }>(`/loans/${loanId}/unfreeze`, { method: 'POST' }),
 
   voidPayment: (paymentId: string) =>
     apiFetch<{ success: boolean }>(`/payments/${paymentId}/void`, { method: 'POST' }),

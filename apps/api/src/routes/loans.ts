@@ -11,7 +11,7 @@ const createLoanSchema = z.object({
   principal: z.number().positive(),
   interestRate: z.number().min(0),
   installmentCount: z.number().int().positive(),
-  frequency: z.enum(['DAILY', 'WEEKLY', 'MONTHLY']),
+  frequency: z.enum(['DAILY', 'WEEKLY', 'FORTNIGHTLY', 'MONTHLY']),
   startDate: z.string().datetime(),
 })
 
@@ -20,6 +20,8 @@ const loans = new Hono<AppEnv>()
 loans.use('/clients/:id/loans', authMiddleware)
 loans.use('/loans/:id', authMiddleware)
 loans.use('/loans/:id/nullify', authMiddleware)
+loans.use('/loans/:id/freeze', authMiddleware)
+loans.use('/loans/:id/unfreeze', authMiddleware)
 
 loans.get('/clients/:id/loans', async (c) => {
   const data = await prisma.loan.findMany({
@@ -40,7 +42,7 @@ loans.post('/clients/:id/loans', zValidator('json', createLoanSchema), async (c)
   const body = c.req.valid('json')
 
   const activeLoan = await prisma.loan.findFirst({
-    where: { clientId, status: { in: ['ACTIVE', 'OVERDUE'] }, client: { userId: c.get('user').id } },
+    where: { clientId, status: { in: ['ACTIVE', 'OVERDUE', 'FROZEN'] }, client: { userId: c.get('user').id } },
   })
   if (activeLoan) {
     throw new HTTPException(409, { message: 'Client already has an active loan' })
@@ -101,8 +103,8 @@ loans.post('/loans/:id/nullify', zValidator('json', nullifySchema), async (c) =>
 
   const loan = await prisma.loan.findFirstOrThrow({ where: { id, client: { userId: c.get('user').id } } })
 
-  if (loan.status !== 'ACTIVE' && loan.status !== 'OVERDUE') {
-    throw new HTTPException(409, { message: 'Only ACTIVE or OVERDUE loans can be nullified' })
+  if (!['ACTIVE', 'OVERDUE', 'FROZEN'].includes(loan.status)) {
+    throw new HTTPException(409, { message: 'Only ACTIVE, OVERDUE, or FROZEN loans can be nullified' })
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -115,6 +117,37 @@ loans.post('/loans/:id/nullify', zValidator('json', nullifySchema), async (c) =>
     return tx.loan.update({ where: { id }, data: { status: 'NULLIFIED' } })
   })
 
+  return c.json(updated)
+})
+
+loans.post('/loans/:id/freeze', async (c) => {
+  const id = c.req.param('id')
+  const loan = await prisma.loan.findFirstOrThrow({ where: { id, client: { userId: c.get('user').id } } })
+
+  if (loan.status !== 'ACTIVE' && loan.status !== 'OVERDUE') {
+    throw new HTTPException(409, { message: 'Only ACTIVE or OVERDUE loans can be frozen' })
+  }
+
+  const updated = await prisma.loan.update({ where: { id }, data: { status: 'FROZEN' } })
+  return c.json(updated)
+})
+
+loans.post('/loans/:id/unfreeze', async (c) => {
+  const id = c.req.param('id')
+  const loan = await prisma.loan.findFirstOrThrow({
+    where: { id, client: { userId: c.get('user').id } },
+    include: { installments: { select: { status: true } } },
+  })
+
+  if (loan.status !== 'FROZEN') {
+    throw new HTTPException(409, { message: 'Only FROZEN loans can be unfrozen' })
+  }
+
+  const hasOverdue = loan.installments.some((i) => i.status === 'OVERDUE')
+  const updated = await prisma.loan.update({
+    where: { id },
+    data: { status: hasOverdue ? 'OVERDUE' : 'ACTIVE' },
+  })
   return c.json(updated)
 })
 

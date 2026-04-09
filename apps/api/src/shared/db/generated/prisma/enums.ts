@@ -23,7 +23,8 @@ export const LoanStatus = {
   ACTIVE: 'ACTIVE',
   COMPLETED: 'COMPLETED',
   OVERDUE: 'OVERDUE',
-  NULLIFIED: 'NULLIFIED'
+  NULLIFIED: 'NULLIFIED',
+  FROZEN: 'FROZEN'
 } as const
 
 export type LoanStatus = (typeof LoanStatus)[keyof typeof LoanStatus]

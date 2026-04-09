@@ -407,7 +407,7 @@ export default function ClienteDetalle() {
   if (error || !client) return <main className="max-w-3xl mx-auto px-4 py-6"><p className="text-destructive">{error}</p></main>
 
   const activeLoan: LoanWithInstallments | undefined = client.loans.find(
-    (l) => l.status === 'ACTIVE' || l.status === 'OVERDUE',
+    (l) => l.status === 'ACTIVE' || l.status === 'OVERDUE' || l.status === 'FROZEN',
   )
   const pastLoans = client.loans.filter((l) => l.status === 'COMPLETED' || l.status === 'NULLIFIED')
 
@@ -536,16 +536,33 @@ export default function ClienteDetalle() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Préstamo activo</CardTitle>
               <div className="flex items-center gap-2">
-                <Badge variant={activeLoan.status === 'OVERDUE' ? 'destructive' : 'default'}>
-                  {activeLoan.status === 'OVERDUE' ? 'En mora' : 'Activo'}
+                <Badge variant={activeLoan.status === 'OVERDUE' ? 'destructive' : activeLoan.status === 'FROZEN' ? 'secondary' : 'default'}>
+                  {activeLoan.status === 'OVERDUE' ? 'En mora' : activeLoan.status === 'FROZEN' ? 'Congelado' : 'Activo'}
                 </Badge>
+                {activeLoan.status === 'FROZEN' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => { await api.unfreezeLoan(activeLoan.id); setLoading(true); load() }}
+                  >
+                    Descongelar
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => { await api.freezeLoan(activeLoan.id); setLoading(true); load() }}
+                  >
+                    Congelar
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
                   className="text-destructive hover:text-destructive border-destructive/40 hover:bg-destructive/10"
                   onClick={() => handleNullifyLoan(activeLoan.id)}
                 >
-                  Anular préstamo
+                  Anular
                 </Button>
               </div>
             </div>

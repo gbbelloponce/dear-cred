@@ -13,12 +13,14 @@ const LOAN_STATUS_LABEL: Record<string, string> = {
   ACTIVE: 'Activo',
   OVERDUE: 'En mora',
   COMPLETED: 'Finalizado',
+  FROZEN: 'Congelado',
 }
 
 const LOAN_STATUS_VARIANT: Record<string, 'default' | 'destructive' | 'secondary'> = {
   ACTIVE: 'default',
   OVERDUE: 'destructive',
   COMPLETED: 'secondary',
+  FROZEN: 'secondary',
 }
 
 export default function Clientes() {
