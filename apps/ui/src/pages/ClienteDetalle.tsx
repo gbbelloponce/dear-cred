@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { api, type ClientDetail, type LoanWithInstallments, type Installment, type PaymentMethod } from '@/services/api'
+import { argentinaDateInputToIsoStart, formatArgentinaDateInput } from '@/lib/date'
 
 const FREQ_LABEL: Record<string, string> = {
   DAILY: 'Diaria',
@@ -228,13 +229,13 @@ export default function ClienteDetalle() {
   const [payingId, setPayingId] = useState<string | null>(null)
   const [payAmount, setPayAmount] = useState('')
   const [payMethod, setPayMethod] = useState<PaymentMethod>('TRANSFER')
-  const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [payDate, setPayDate] = useState(() => formatArgentinaDateInput(new Date()))
   const [payLoading, setPayLoading] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
 
   // Resolve form
   const [resolveMethod, setResolveMethod] = useState<PaymentMethod>('TRANSFER')
-  const [resolveDate, setResolveDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [resolveDate, setResolveDate] = useState(() => formatArgentinaDateInput(new Date()))
   const [resolvingId, setResolvingId] = useState<string | null>(null)
 
   // Confirm dialog
@@ -298,7 +299,7 @@ export default function ClienteDetalle() {
     setPayingId(inst.id)
     setPayAmount('')
     setPayMethod('TRANSFER')
-    setPayDate(new Date().toISOString().slice(0, 10))
+    setPayDate(formatArgentinaDateInput(new Date()))
     setPayError(null)
   }
 
@@ -317,7 +318,7 @@ export default function ClienteDetalle() {
       await api.createPayment(payingId, {
         amount,
         method: payMethod,
-        paymentDate: new Date(payDate).toISOString(),
+        paymentDate: argentinaDateInputToIsoStart(payDate),
       })
       setPayingId(null)
       setLoading(true)
@@ -332,7 +333,7 @@ export default function ClienteDetalle() {
   function startResolving(inst: Installment) {
     setResolvingId(inst.id)
     setResolveMethod('CASH')
-    setResolveDate(new Date().toISOString().slice(0, 10))
+    setResolveDate(formatArgentinaDateInput(new Date()))
   }
 
   async function handleResolve(e: FormEvent) {
@@ -341,7 +342,7 @@ export default function ClienteDetalle() {
     try {
       await api.resolveInstallment(resolvingId, {
         method: resolveMethod,
-        paymentDate: new Date(resolveDate).toISOString(),
+        paymentDate: argentinaDateInputToIsoStart(resolveDate),
       })
       setResolvingId(null)
       setLoading(true)

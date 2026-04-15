@@ -273,7 +273,10 @@ enum PaymentMethod {
 1. `totalAmount = principal * (1 + interestRate / 100)`
 2. `installmentAmount = totalAmount / installmentCount`
 3. Generate all installments upfront with sequential due dates based on `frequency` + `startDate`
-4. A client can only have **one ACTIVE loan at a time**
+4. If a generated due date lands on **Sunday ARG**, shift it to **Monday**
+5. For `DAILY` loans, that Sunday shift **cascades** to all following installments so no two installments share the same due date
+6. For `WEEKLY`, `FORTNIGHTLY`, and `MONTHLY` loans, each installment is evaluated independently; only the installment that lands on Sunday is shifted
+7. A client can only have **one ACTIVE loan at a time**
 
 ### Installment Status Transitions
 ```
@@ -288,12 +291,14 @@ OVERDUE → LATE_PAID      (paid in full after being overdue)
 - Find all `PENDING` installments where `dueDate < now()`
 - Mark them `OVERDUE`
 - For each one: append one penalty installment at end of plan (`isPenalty: true`, same `installmentAmount`, `number = last + 1`)
+- Penalty installments follow the same Sunday rule: if the computed due date lands on Sunday ARG, shift it to Monday
 - Update loan `status` to `OVERDUE` if not already
 - One penalty per overdue event only
 
 ### Partial Payment Logic
 - Admin registers payment with `amount < installment.amount` → status becomes `PARTIALLY_PAID`
 - **Immediately** append one penalty installment to end of plan
+- That appended penalty installment also follows the same Sunday rule: Sunday ARG shifts to Monday
 - The partial balance is **not carried over** to the next installment
 - Each installment keeps its original `amount`
 - A `PARTIALLY_PAID` installment can only be fully resolved (pay remaining balance) → becomes `LATE_PAID`
@@ -393,6 +398,14 @@ All installment due dates are stored in PostgreSQL as UTC timestamps at **02:55 
 e.g. April 8 ARG deadline → stored as `2026-04-09T02:55:00Z`.
 Computed via `Date.UTC(y, m, d + 1, 2, 55, 0)` in `dateUtils.ts` (the `+1` pushes to the next UTC day).
 This means: on the calendar day of the due date, the client has until 11:55 PM local time to pay.
+
+### Sunday Handling
+Because due dates are stored at `02:55 UTC` on the next UTC day, a stored due date with `getUTCDay() === 1` means the effective due day in Argentina is **Sunday**.
+
+- Sunday due dates are never kept as Sunday ARG; they are shifted forward by one day to Monday
+- For `DAILY` schedules, the Sunday shift is **cumulative**: once one installment moves forward, all subsequent installments stay shifted too
+- For `WEEKLY`, `FORTNIGHTLY`, and `MONTHLY` schedules, the Sunday check is **per installment** and does not cascade
+- Penalty installments use the same rule, so appended penalties also avoid Sunday ARG due dates
 
 ### Cron Job Timing
 The cron runs at **02:58 UTC = 23:58 ARG** — 3 minutes after the client deadline.

@@ -1,3 +1,5 @@
+import { formatArgentinaDateInput } from '@/lib/date'
+
 const API_URL = import.meta.env.VITE_API_URL as string
 const TOKEN_KEY = 'token'
 
@@ -187,8 +189,8 @@ export const api = {
 
   getDashboard: (params?: { from?: Date; to?: Date }) => {
     const qs = new URLSearchParams()
-    if (params?.from) qs.set('from', params.from.toISOString().slice(0, 10))
-    if (params?.to) qs.set('to', params.to.toISOString().slice(0, 10))
+    if (params?.from) qs.set('from', formatArgentinaDateInput(params.from))
+    if (params?.to) qs.set('to', formatArgentinaDateInput(params.to))
     const query = qs.toString() ? `?${qs}` : ''
     return apiFetch<DashboardData>(`/dashboard${query}`)
   },

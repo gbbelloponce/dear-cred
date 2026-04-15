@@ -4,6 +4,25 @@ import { authMiddleware } from '../middleware/auth.ts'
 import type { AppEnv } from '../lib/types.ts'
 
 const dashboard = new Hono<AppEnv>()
+const ARGENTINA_UTC_OFFSET_HOURS = 3
+
+function parseArgentinaDateStart(dateInput: string): Date {
+  const [year, month, day] = dateInput.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day, ARGENTINA_UTC_OFFSET_HOURS, 0, 0, 0))
+}
+
+function parseArgentinaDateEnd(dateInput: string): Date {
+  const [year, month, day] = dateInput.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day + 1, ARGENTINA_UTC_OFFSET_HOURS - 1, 59, 59, 999))
+}
+
+function getArgentinaMonthStart(now: Date): Date {
+  const argentinaNow = new Date(now.getTime() - ARGENTINA_UTC_OFFSET_HOURS * 60 * 60 * 1000)
+
+  return new Date(
+    Date.UTC(argentinaNow.getUTCFullYear(), argentinaNow.getUTCMonth(), 1, ARGENTINA_UTC_OFFSET_HOURS, 0, 0, 0),
+  )
+}
 
 dashboard.use('*', authMiddleware)
 
@@ -12,10 +31,8 @@ dashboard.get('/', async (c) => {
   const now = new Date()
   const fromParam = c.req.query('from')
   const toParam = c.req.query('to')
-  const rangeStart = fromParam ? new Date(fromParam) : new Date(now.getFullYear(), now.getMonth(), 1)
-  const rangeEnd = toParam
-    ? new Date(`${toParam}T23:59:59.999Z`)
-    : now
+  const rangeStart = fromParam ? parseArgentinaDateStart(fromParam) : getArgentinaMonthStart(now)
+  const rangeEnd = toParam ? parseArgentinaDateEnd(toParam) : now
 
   const [
     pendingInstallments,
