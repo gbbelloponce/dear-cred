@@ -33,7 +33,8 @@ export type ClientSummary = {
   deletedAt: string | null
   loans: Array<{
     id: string
-    status: string
+    type: LoanType
+    status: LoanStatus
     principal: number
     totalAmount: number
     installments: Array<{ id: string; status: string; dueDate: string; amount: number }>
@@ -44,6 +45,7 @@ export type PaymentMethod = 'CASH' | 'TRANSFER'
 export type Frequency = 'DAILY' | 'WEEKLY' | 'FORTNIGHTLY' | 'MONTHLY'
 export type InstallmentStatus = 'PENDING' | 'PAID' | 'PARTIALLY_PAID' | 'LATE_PAID' | 'OVERDUE'
 export type LoanStatus = 'ACTIVE' | 'COMPLETED' | 'OVERDUE' | 'NULLIFIED' | 'FROZEN'
+export type LoanType = 'CASH' | 'PRODUCT'
 
 export type Payment = {
   id: string
@@ -67,6 +69,7 @@ export type Installment = {
 export type LoanWithInstallments = {
   id: string
   clientId: string
+  type: LoanType
   principal: number
   interestRate: number
   totalAmount: number
@@ -75,6 +78,8 @@ export type LoanWithInstallments = {
   frequency: Frequency
   startDate: string
   status: LoanStatus
+  productName: string | null
+  productDescription: string | null
   createdAt: string
   installments: Installment[]
 }
@@ -142,6 +147,9 @@ export const api = {
       installmentCount: number
       frequency: Frequency
       startDate: string
+      type?: LoanType
+      productName?: string
+      productDescription?: string
     },
   ) =>
     apiFetch<LoanWithInstallments>(`/clients/${clientId}/loans`, {

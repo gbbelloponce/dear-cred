@@ -106,17 +106,20 @@ model Client {
 }
 
 model Loan {
-  id                String        @id @default(cuid())
-  clientId          String
-  principal         Float
-  interestRate      Float
-  totalAmount       Float         // principal * (1 + interestRate / 100)
-  installmentAmount Float         // totalAmount / installmentCount
-  installmentCount  Int           // original count — never changes when penalties are added
-  frequency         Frequency
-  startDate         DateTime
-  status            LoanStatus
-  createdAt         DateTime      @default(now())
+  id                 String     @id @default(cuid())
+  clientId           String
+  type               LoanType   @default(CASH)
+  principal          Float
+  interestRate       Float
+  totalAmount        Float      // principal * (1 + interestRate / 100)
+  installmentAmount  Float      // totalAmount / installmentCount
+  installmentCount   Int        // original count — never changes when penalties are added
+  frequency          Frequency
+  startDate          DateTime
+  status             LoanStatus @default(ACTIVE)
+  productName        String?    // required when type = PRODUCT, null when type = CASH
+  productDescription String?    // optional free text, mainly useful for PRODUCT
+  createdAt          DateTime   @default(now())
   client            Client        @relation(fields: [clientId], references: [id])
   installments      Installment[]
 }
@@ -152,6 +155,11 @@ enum Frequency {
   MONTHLY
 }
 
+enum LoanType {
+  CASH
+  PRODUCT
+}
+
 enum LoanStatus {
   ACTIVE
   COMPLETED
@@ -185,7 +193,7 @@ enum PaymentMethod {
 4. If a generated due date lands on **Sunday ARG**, shift it forward to Monday
 5. For `DAILY` loans, the Sunday shift **cascades** — all subsequent installments shift too so no two share the same date
 6. For `WEEKLY`, `FORTNIGHTLY`, and `MONTHLY` loans, each installment is evaluated independently — no cascade
-7. A client can only have one `ACTIVE`, `OVERDUE`, or `FROZEN` loan at a time
+7. A client can have at most one active/overdue/frozen `CASH` loan and one active/overdue/frozen `PRODUCT` loan simultaneously — two loans of the same type are not allowed at the same time
 
 ### Installment Status Transitions
 ```
@@ -249,7 +257,7 @@ OVERDUE        → LATE_PAID      paid in full after being overdue
 
 ### Client Soft Delete
 - Clients are never hard-deleted — `deletedAt` is set to the current timestamp
-- **Guard:** clients with an `ACTIVE`, `OVERDUE`, or `FROZEN` loan cannot be deleted
+- **Guard:** clients with an `ACTIVE`, `OVERDUE`, or `FROZEN` loan (of any type) cannot be deleted
 - Soft-deleted clients are excluded from: client list, all dashboard debt/overdue metrics, and the overdue cron
 - Soft-deleted clients **are included** in `collectedThisMonth` and `cashVsTransfer` — money already received counts
 - Deleted clients can be viewed read-only at `/clientes/:id`
@@ -271,7 +279,7 @@ PUT    /clients/:id                   # edit client
 DELETE /clients/:id                   # soft-delete (blocked if active/overdue/frozen loan exists)
 
 GET    /clients/:id/loans             # loan history
-POST   /clients/:id/loans             # create loan (blocked if active/overdue/frozen loan exists)
+POST   /clients/:id/loans             # create loan (blocked if active/overdue/frozen loan of the same type exists)
 GET    /loans/:id                     # loan detail with all installments
 
 POST   /installments/:id/payments     # register full or partial payment
@@ -351,7 +359,7 @@ Query: `WHERE status = 'PENDING' AND dueDate < now()` catches all today's unpaid
 
 ## Key Constraints & Rules Summary
 
-- One active/overdue/frozen loan per client at a time
+- One active/overdue/frozen loan per type (CASH / PRODUCT) per client at a time — a client may have one of each simultaneously
 - Installment amounts are always fixed — same for all installments including penalties
 - Partial payments do NOT carry balance to the next installment
 - Each partial payment triggers one penalty installment appended at end of plan

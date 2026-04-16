@@ -9,17 +9,14 @@ import { api, type ClientSummary } from '@/services/api'
 
 const PAGE_SIZE = 10
 
-const LOAN_STATUS_LABEL: Record<string, string> = {
-  ACTIVE: 'Activo',
-  OVERDUE: 'En mora',
-  COMPLETED: 'Finalizado',
-  FROZEN: 'Congelado',
+const LOAN_BADGE_LABEL: Record<string, Record<string, string>> = {
+  CASH: { ACTIVE: 'Activo', OVERDUE: 'En mora', FROZEN: 'Congelado' },
+  PRODUCT: { ACTIVE: 'Venta activa', OVERDUE: 'Venta en mora', FROZEN: 'Venta congelada' },
 }
 
 const LOAN_STATUS_VARIANT: Record<string, 'default' | 'destructive' | 'secondary'> = {
   ACTIVE: 'default',
   OVERDUE: 'destructive',
-  COMPLETED: 'secondary',
   FROZEN: 'secondary',
 }
 
@@ -122,7 +119,6 @@ export default function Clientes() {
         <>
           <ul className="flex flex-col gap-2">
             {paginated.map((client) => {
-              const activeLoan = client.loans[0] ?? null
               return (
                 <li
                   key={client.id}
@@ -138,11 +134,13 @@ export default function Clientes() {
                     </p>
                     <p className="text-sm text-muted-foreground">DNI {client.dni}</p>
                   </div>
-                  {activeLoan && (
-                    <Badge variant={LOAN_STATUS_VARIANT[activeLoan.status] ?? 'secondary'}>
-                      {LOAN_STATUS_LABEL[activeLoan.status] ?? activeLoan.status}
-                    </Badge>
-                  )}
+                  <div className="flex gap-1 flex-wrap justify-end">
+                    {client.loans.map((loan) => (
+                      <Badge key={loan.id} variant={LOAN_STATUS_VARIANT[loan.status] ?? 'secondary'}>
+                        {LOAN_BADGE_LABEL[loan.type]?.[loan.status] ?? loan.status}
+                      </Badge>
+                    ))}
+                  </div>
                 </li>
               )
             })}

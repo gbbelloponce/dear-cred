@@ -5,6 +5,11 @@ enum Frequency {
   MONTHLY
 }
 
+enum LoanType {
+  CASH
+  PRODUCT
+}
+
 enum LoanStatus {
   ACTIVE
   COMPLETED
