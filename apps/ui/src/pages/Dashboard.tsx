@@ -98,6 +98,16 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmt(data.totalOwed)}</p>
+            {(data.owedByType.CASH > 0 || data.owedByType.PRODUCT > 0) && (
+              <div className="flex gap-3 mt-1">
+                {data.owedByType.CASH > 0 && (
+                  <p className="text-xs text-muted-foreground">Préstamos: {fmt(data.owedByType.CASH)}</p>
+                )}
+                {data.owedByType.PRODUCT > 0 && (
+                  <p className="text-xs text-muted-foreground">Ventas: {fmt(data.owedByType.PRODUCT)}</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -173,7 +183,12 @@ export default function Dashboard() {
               <tbody>
                 {paginatedDebt.map((row) => (
                   <tr key={row.loanId} className="border-b last:border-0">
-                    <td className="px-4 py-2">{row.clientName}</td>
+                    <td className="px-4 py-2">
+                      <span>{row.clientName}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {row.type === 'PRODUCT' ? `Venta — ${row.productName}` : 'Préstamo'}
+                      </span>
+                    </td>
                     <td className="px-4 py-2 text-right font-medium">{fmt(row.remaining)}</td>
                   </tr>
                 ))}
@@ -182,7 +197,7 @@ export default function Dashboard() {
             {debtTotalPages > 1 && (
               <div className="flex items-center justify-between px-4 py-3 border-t">
                 <p className="text-xs text-muted-foreground">
-                  {data.debtPerClient.length} clientes · página {debtCurrentPage} de {debtTotalPages}
+                  {data.debtPerClient.length} activos · página {debtCurrentPage} de {debtTotalPages}
                 </p>
                 <div className="flex gap-2">
                   <Button
