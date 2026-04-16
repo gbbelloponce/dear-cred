@@ -832,7 +832,7 @@ export default function ClienteDetalle() {
       {pastLoans.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Historial de préstamos</CardTitle>
+            <CardTitle className="text-base">Historial</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {pastLoans.map((loan) => {
@@ -845,7 +845,10 @@ export default function ClienteDetalle() {
                     onClick={() => togglePastLoan(loan.id)}
                   >
                     <div>
-                      <p className="font-medium">{fmtDate(loan.startDate)}</p>
+                      <p className="font-medium">
+                        {loan.type === 'PRODUCT' ? `Venta — ${loan.productName}` : 'Préstamo'}
+                        <span className="text-muted-foreground font-normal ml-2">{fmtDate(loan.startDate)}</span>
+                      </p>
                       <p className="text-muted-foreground">
                         {fmt(loan.principal)} · {loan.installmentCount} cuotas · {FREQ_LABEL[loan.frequency]}
                       </p>
