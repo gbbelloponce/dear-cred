@@ -11,10 +11,19 @@ import payments from './routes/payments.ts'
 
 const app = new Hono()
 
+const allowedOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:5173').split(',')
+const vercelPreviewPattern = process.env.CORS_VERCEL_PATTERN
+  ? new RegExp(process.env.CORS_VERCEL_PATTERN)
+  : null
+
 app.use(
   '*',
   cors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+    origin: (origin) => {
+      if (allowedOrigins.includes(origin)) return origin
+      if (vercelPreviewPattern?.test(origin)) return origin
+      return null
+    },
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
