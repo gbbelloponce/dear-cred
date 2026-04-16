@@ -110,7 +110,7 @@ export default function PrestamoNuevo() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CASH">Préstamo en efectivo</SelectItem>
+                  <SelectItem value="CASH">Préstamo</SelectItem>
                   <SelectItem value="PRODUCT">Venta de producto</SelectItem>
                 </SelectContent>
               </Select>
