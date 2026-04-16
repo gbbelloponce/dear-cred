@@ -58,10 +58,10 @@ export function computeDueDates(startDate: Date, count: number, frequency: Frequ
   const m = startDate.getUTCMonth()
   const d = startDate.getUTCDate()
   const dates = Array.from({ length: count }, (_, i) => {
-    if (frequency === 'DAILY')       return new Date(Date.UTC(y, m, d + (i + 1)      + 1, 2, 55, 0))
-    if (frequency === 'WEEKLY')      return new Date(Date.UTC(y, m, d + (i + 1) * 7  + 1, 2, 55, 0))
-    if (frequency === 'FORTNIGHTLY') return new Date(Date.UTC(y, m, d + (i + 1) * 15 + 1, 2, 55, 0))
-    /* MONTHLY */                    return new Date(Date.UTC(y, m + (i + 1), d      + 1, 2, 55, 0))
+    if (frequency === 'DAILY')       return new Date(Date.UTC(y, m, d + i        + 1, 2, 55, 0))
+    if (frequency === 'WEEKLY')      return new Date(Date.UTC(y, m, d + i * 7    + 1, 2, 55, 0))
+    if (frequency === 'FORTNIGHTLY') return new Date(Date.UTC(y, m, d + i * 15   + 1, 2, 55, 0))
+    /* MONTHLY */                    return new Date(Date.UTC(y, m + i, d        + 1, 2, 55, 0))
   })
 
   return skipSundays(dates, frequency)
