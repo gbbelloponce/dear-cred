@@ -5,6 +5,7 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "bun --filter '*' dev"
+    "dev": "bun --filter '*' dev",
+    "typecheck": "bun --filter '*' typecheck"
   }
 }

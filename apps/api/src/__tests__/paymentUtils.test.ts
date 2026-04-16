@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import { determinePaymentStatus } from '../lib/paymentUtils.ts'
 
-const dueDate = new Date('2025-03-15T20:00:00.000Z')
-const onTime = new Date('2025-03-15T19:00:00.000Z')  // 1 hour before due
-const exactly = new Date('2025-03-15T20:00:00.000Z')  // exactly at due date
-const late = new Date('2025-03-16T10:00:00.000Z')     // next day
+const dueDate = new Date('2025-03-16T02:55:00.000Z')
+const onTime = new Date('2025-03-16T02:54:00.000Z')  // 1 minute before due
+const exactly = new Date('2025-03-16T02:55:00.000Z')  // exactly at due date
+const late = new Date('2025-03-16T03:00:00.000Z')     // 5 minutes late
 const amount = 1000
 
 describe('determinePaymentStatus', () => {

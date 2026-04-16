@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { api, type Frequency } from '@/services/api'
+import { argentinaDateInputToIsoStart } from '@/lib/date'
 
 const FREQUENCY_LABEL: Record<Frequency, string> = {
   DAILY: 'Diaria',
@@ -52,7 +53,7 @@ export default function PrestamoNuevo() {
         interestRate: rateNum,
         installmentCount: countNum,
         frequency,
-        startDate: `${startDate}T20:00:00.000Z`,
+        startDate: argentinaDateInputToIsoStart(startDate),
       })
       navigate(`/clientes/${clientId}`)
     } catch (err) {
