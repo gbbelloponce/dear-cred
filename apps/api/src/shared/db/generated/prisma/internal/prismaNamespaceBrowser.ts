@@ -107,6 +107,7 @@ export type InstallmentScalarFieldEnum = (typeof InstallmentScalarFieldEnum)[key
 export const LoanScalarFieldEnum = {
   id: 'id',
   clientId: 'clientId',
+  type: 'type',
   principal: 'principal',
   interestRate: 'interestRate',
   totalAmount: 'totalAmount',
@@ -115,6 +116,8 @@ export const LoanScalarFieldEnum = {
   frequency: 'frequency',
   startDate: 'startDate',
   status: 'status',
+  productName: 'productName',
+  productDescription: 'productDescription',
   createdAt: 'createdAt'
 } as const
 

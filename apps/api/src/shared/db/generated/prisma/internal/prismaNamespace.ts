@@ -776,6 +776,7 @@ export type InstallmentScalarFieldEnum = (typeof InstallmentScalarFieldEnum)[key
 export const LoanScalarFieldEnum = {
   id: 'id',
   clientId: 'clientId',
+  type: 'type',
   principal: 'principal',
   interestRate: 'interestRate',
   totalAmount: 'totalAmount',
@@ -784,6 +785,8 @@ export const LoanScalarFieldEnum = {
   frequency: 'frequency',
   startDate: 'startDate',
   status: 'status',
+  productName: 'productName',
+  productDescription: 'productDescription',
   createdAt: 'createdAt'
 } as const
 
@@ -906,6 +909,20 @@ export type ListEnumInstallmentStatusFieldRefInput<$PrismaModel> = FieldRefInput
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
+ * Reference to a field of type 'LoanType'
+ */
+export type EnumLoanTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LoanType'>
+    
+
+
+/**
+ * Reference to a field of type 'LoanType[]'
+ */
+export type ListEnumLoanTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LoanType[]'>
     
 
 

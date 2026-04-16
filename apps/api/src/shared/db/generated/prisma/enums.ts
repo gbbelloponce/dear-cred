@@ -19,6 +19,14 @@ export const Frequency = {
 export type Frequency = (typeof Frequency)[keyof typeof Frequency]
 
 
+export const LoanType = {
+  CASH: 'CASH',
+  PRODUCT: 'PRODUCT'
+} as const
+
+export type LoanType = (typeof LoanType)[keyof typeof LoanType]
+
+
 export const LoanStatus = {
   ACTIVE: 'ACTIVE',
   COMPLETED: 'COMPLETED',
