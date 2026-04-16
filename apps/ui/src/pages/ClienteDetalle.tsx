@@ -388,7 +388,7 @@ export default function ClienteDetalle() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : ''
       if (msg.includes('409') || msg.includes('active')) {
-        setDeleteError('El cliente tiene un préstamo activo. Anúlelo antes de eliminarlo.')
+        setDeleteError('El cliente tiene un préstamo o venta activa. Anúlelo antes de eliminarlo.')
       } else {
         setDeleteError('No se pudo eliminar el cliente. Intentá de nuevo.')
       }
