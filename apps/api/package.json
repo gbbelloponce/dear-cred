@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "test": "bun test",
-    "typecheck": "bunx tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "dev": "bun run --hot src/index.ts",
     "db:generate": "prisma generate",
     "db:migrate:create": "prisma migrate dev --create-only",
@@ -24,6 +24,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "dotenv": "^17.3.1",
-    "prisma": "^7.4.2"
+    "prisma": "^7.4.2",
+    "typescript": "~5.9.3"
   }
 }

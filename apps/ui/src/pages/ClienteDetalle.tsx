@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
-import { api, type ClientDetail, type LoanWithInstallments, type Installment, type PaymentMethod } from '@/services/api'
+import { api, type ClientDetail, type LoanWithInstallments, type Installment, type PaymentMethod, type LoanType } from '@/services/api'
 import { argentinaDateInputToIsoStart, formatArgentinaDateInput } from '@/lib/date'
 
 const FREQ_LABEL: Record<string, string> = {
@@ -388,7 +388,7 @@ export default function ClienteDetalle() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : ''
       if (msg.includes('409') || msg.includes('active')) {
-        setDeleteError('El cliente tiene un préstamo activo. Anúlelo antes de eliminarlo.')
+        setDeleteError('El cliente tiene un préstamo o venta activa. Anúlelo antes de eliminarlo.')
       } else {
         setDeleteError('No se pudo eliminar el cliente. Intentá de nuevo.')
       }
@@ -407,9 +407,11 @@ export default function ClienteDetalle() {
   if (loading) return <main className="max-w-3xl mx-auto px-4 py-6"><p className="text-muted-foreground">Cargando...</p></main>
   if (error || !client) return <main className="max-w-3xl mx-auto px-4 py-6"><p className="text-destructive">{error}</p></main>
 
-  const activeLoan: LoanWithInstallments | undefined = client.loans.find(
+  const activeLoans = client.loans.filter(
     (l) => l.status === 'ACTIVE' || l.status === 'OVERDUE' || l.status === 'FROZEN',
   )
+  const cashLoan = activeLoans.find((l) => l.type === 'CASH')
+  const productLoan = activeLoans.find((l) => l.type === 'PRODUCT')
   const pastLoans = client.loans.filter((l) => l.status === 'COMPLETED' || l.status === 'NULLIFIED')
 
   return (
@@ -530,211 +532,228 @@ export default function ClienteDetalle() {
         </CardContent>
       </Card>
 
-      {/* Active loan */}
-      {activeLoan ? (
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Préstamo activo</CardTitle>
-              <div className="flex items-center gap-2">
-                <Badge variant={activeLoan.status === 'OVERDUE' ? 'destructive' : activeLoan.status === 'FROZEN' ? 'secondary' : 'default'}>
-                  {activeLoan.status === 'OVERDUE' ? 'En mora' : activeLoan.status === 'FROZEN' ? 'Congelado' : 'Activo'}
-                </Badge>
-                {activeLoan.status === 'FROZEN' ? (
+      {/* Active loan panels */}
+      {[
+        { loan: cashLoan, loanType: 'CASH' as LoanType },
+        { loan: productLoan, loanType: 'PRODUCT' as LoanType },
+      ].map(({ loan, loanType }) => (
+        loan ? (
+          <Card key={loan.id}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">
+                    {loanType === 'CASH' ? 'Préstamo activo' : `Venta activa — ${loan.productName}`}
+                  </CardTitle>
+                  {loanType === 'PRODUCT' && loan.productDescription && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{loan.productDescription}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={loan.status === 'OVERDUE' ? 'destructive' : loan.status === 'FROZEN' ? 'secondary' : 'default'}>
+                    {loan.status === 'OVERDUE' ? 'En mora' : loan.status === 'FROZEN' ? 'Congelado' : 'Activo'}
+                  </Badge>
+                  {loan.status === 'FROZEN' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => { await api.unfreezeLoan(loan.id); setLoading(true); load() }}
+                    >
+                      Descongelar
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => { await api.freezeLoan(loan.id); setLoading(true); load() }}
+                    >
+                      Congelar
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={async () => { await api.unfreezeLoan(activeLoan.id); setLoading(true); load() }}
+                    className="text-destructive hover:text-destructive border-destructive/40 hover:bg-destructive/10"
+                    onClick={() => handleNullifyLoan(loan.id)}
                   >
-                    Descongelar
+                    Anular
                   </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => { await api.freezeLoan(activeLoan.id); setLoading(true); load() }}
-                  >
-                    Congelar
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive border-destructive/40 hover:bg-destructive/10"
-                  onClick={() => handleNullifyLoan(activeLoan.id)}
-                >
-                  Anular
-                </Button>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Capital</span>
-                <span>{fmt(activeLoan.principal)}</span>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{loanType === 'PRODUCT' ? 'Costo' : 'Capital'}</span>
+                  <span>{fmt(loan.principal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total</span>
+                  <span>{fmt(loan.totalAmount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Frecuencia</span>
+                  <span>{FREQ_LABEL[loan.frequency]}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Inicio</span>
+                  <span>{fmtDate(loan.startDate)}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total</span>
-                <span>{fmt(activeLoan.totalAmount)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Frecuencia</span>
-                <span>{FREQ_LABEL[activeLoan.frequency]}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Inicio</span>
-                <span>{fmtDate(activeLoan.startDate)}</span>
-              </div>
-            </div>
 
-            <Separator />
+              <Separator />
 
-            {/* Resolve form */}
-            {resolvingId && (
-              <div className="rounded-lg border bg-muted/30 p-4">
-                {(() => {
-                  const inst = activeLoan.installments.find((i) => i.id === resolvingId)
-                  if (!inst) return null
-                  const paid = paidAmount(inst)
-                  const remaining = inst.amount - paid
-                  return (
-                    <form onSubmit={handleResolve} className="flex flex-col gap-3">
-                      <p className="text-sm font-medium">
-                        Cuota #{inst.number} — Saldar saldo restante ({fmt(remaining)})
-                      </p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="flex flex-col gap-1.5">
-                          <Label>Método</Label>
-                          <Select value={resolveMethod} onValueChange={(v) => setResolveMethod(v as PaymentMethod)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="CASH">Efectivo</SelectItem>
-                              <SelectItem value="TRANSFER">Transferencia</SelectItem>
-                            </SelectContent>
-                          </Select>
+              {/* Resolve form */}
+              {resolvingId && loan.installments.some((i) => i.id === resolvingId) && (
+                <div className="rounded-lg border bg-muted/30 p-4">
+                  {(() => {
+                    const inst = loan.installments.find((i) => i.id === resolvingId)
+                    if (!inst) return null
+                    const paid = paidAmount(inst)
+                    const remaining = inst.amount - paid
+                    return (
+                      <form onSubmit={handleResolve} className="flex flex-col gap-3">
+                        <p className="text-sm font-medium">
+                          Cuota #{inst.number} — Saldar saldo restante ({fmt(remaining)})
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex flex-col gap-1.5">
+                            <Label>Método</Label>
+                            <Select value={resolveMethod} onValueChange={(v) => setResolveMethod(v as PaymentMethod)}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="CASH">Efectivo</SelectItem>
+                                <SelectItem value="TRANSFER">Transferencia</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label>Fecha de pago</Label>
+                            <Input
+                              type="date"
+                              value={resolveDate}
+                              onChange={(e) => setResolveDate(e.target.value)}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button type="button" variant="outline" size="sm" onClick={() => setResolvingId(null)}>
+                            Cancelar
+                          </Button>
+                          <Button type="submit" size="sm">
+                            Saldar
+                          </Button>
+                        </div>
+                      </form>
+                    )
+                  })()}
+                </div>
+              )}
+
+              {/* Payment form */}
+              {payingId && loan.installments.some((i) => i.id === payingId) && (
+                <div className="rounded-lg border bg-muted/30 p-4">
+                  {(() => {
+                    const inst = loan.installments.find((i) => i.id === payingId)
+                    if (!inst) return null
+                    const remaining = inst.amount - paidAmount(inst)
+                    return (
+                      <form onSubmit={handlePay} className="flex flex-col gap-3">
+                        <p className="text-sm font-medium">
+                          Cuota #{inst.number} — Registrar pago
+                          {inst.status === 'PARTIALLY_PAID' && (
+                            <span className="text-muted-foreground ml-1">(restante: {fmt(remaining)})</span>
+                          )}
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex flex-col gap-1.5">
+                            <Label>Monto</Label>
+                            <Input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              max={inst.amount}
+                              value={payAmount}
+                              onChange={(e) => setPayAmount(e.target.value)}
+                              required
+                            />
+                            <button
+                              type="button"
+                              className="text-xs text-muted-foreground hover:text-foreground text-left"
+                              onClick={() => setPayAmount(inst.amount.toString())}
+                            >
+                              Completar monto ({fmt(inst.amount)})
+                            </button>
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label>Método</Label>
+                            <Select value={payMethod} onValueChange={(v) => setPayMethod(v as PaymentMethod)}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="CASH">Efectivo</SelectItem>
+                                <SelectItem value="TRANSFER">Transferencia</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <Label>Fecha de pago</Label>
                           <Input
                             type="date"
-                            value={resolveDate}
-                            onChange={(e) => setResolveDate(e.target.value)}
+                            value={payDate}
+                            onChange={(e) => setPayDate(e.target.value)}
                             required
                           />
                         </div>
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <Button type="button" variant="outline" size="sm" onClick={() => setResolvingId(null)}>
-                          Cancelar
-                        </Button>
-                        <Button type="submit" size="sm">
-                          Saldar
-                        </Button>
-                      </div>
-                    </form>
-                  )
-                })()}
-              </div>
-            )}
-
-            {/* Payment form */}
-            {payingId && (
-              <div className="rounded-lg border bg-muted/30 p-4">
-                {(() => {
-                  const inst = activeLoan.installments.find((i) => i.id === payingId)
-                  if (!inst) return null
-                  const remaining = inst.amount - paidAmount(inst)
-                  return (
-                    <form onSubmit={handlePay} className="flex flex-col gap-3">
-                      <p className="text-sm font-medium">
-                        Cuota #{inst.number} — Registrar pago
-                        {inst.status === 'PARTIALLY_PAID' && (
-                          <span className="text-muted-foreground ml-1">(restante: {fmt(remaining)})</span>
-                        )}
-                      </p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="flex flex-col gap-1.5">
-                          <Label>Monto</Label>
-                          <Input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            max={inst.amount}
-                            value={payAmount}
-                            onChange={(e) => setPayAmount(e.target.value)}
-                            required
-                          />
-                          <button
-                            type="button"
-                            className="text-xs text-muted-foreground hover:text-foreground text-left"
-                            onClick={() => setPayAmount(inst.amount.toString())}
-                          >
-                            Completar monto ({fmt(inst.amount)})
-                          </button>
+                        {payError && <p className="text-sm text-destructive">{payError}</p>}
+                        <div className="flex gap-2 justify-end">
+                          <Button type="button" variant="outline" size="sm" onClick={() => setPayingId(null)}>
+                            Cancelar
+                          </Button>
+                          <Button type="submit" size="sm" disabled={payLoading}>
+                            {payLoading ? 'Registrando...' : 'Registrar'}
+                          </Button>
                         </div>
-                        <div className="flex flex-col gap-1.5">
-                          <Label>Método</Label>
-                          <Select value={payMethod} onValueChange={(v) => setPayMethod(v as PaymentMethod)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="CASH">Efectivo</SelectItem>
-                              <SelectItem value="TRANSFER">Transferencia</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label>Fecha de pago</Label>
-                        <Input
-                          type="date"
-                          value={payDate}
-                          onChange={(e) => setPayDate(e.target.value)}
-                          required
-                        />
-                      </div>
-                      {payError && <p className="text-sm text-destructive">{payError}</p>}
-                      <div className="flex gap-2 justify-end">
-                        <Button type="button" variant="outline" size="sm" onClick={() => setPayingId(null)}>
-                          Cancelar
-                        </Button>
-                        <Button type="submit" size="sm" disabled={payLoading}>
-                          {payLoading ? 'Registrando...' : 'Registrar'}
-                        </Button>
-                      </div>
-                    </form>
-                  )
-                })()}
-              </div>
-            )}
+                      </form>
+                    )
+                  })()}
+                </div>
+              )}
 
-            {/* Installment table */}
-            <InstallmentTable
-              loan={activeLoan}
-              onStartPaying={startPaying}
-              onStartResolving={startResolving}
-              onVoidPayment={handleVoidPayment}
-              onDeleteInstallment={handleDeleteInstallment}
-              allowVoid={true}
-              payingId={payingId}
-            />
-            <p className="text-xs text-muted-foreground">* Penalidad — el número debajo indica la cuota que la originó</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="flex items-center justify-between py-4">
-            <p className="text-muted-foreground text-sm">Sin préstamo activo</p>
-            <Button size="sm" onClick={() => navigate(`/clientes/${client.id}/prestamo/nuevo`)}>
-              Nuevo préstamo
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+              {/* Installment table */}
+              <InstallmentTable
+                loan={loan}
+                onStartPaying={startPaying}
+                onStartResolving={startResolving}
+                onVoidPayment={handleVoidPayment}
+                onDeleteInstallment={handleDeleteInstallment}
+                allowVoid={true}
+                payingId={payingId}
+              />
+              <p className="text-xs text-muted-foreground">* Penalidad — el número debajo indica la cuota que la originó</p>
+            </CardContent>
+          </Card>
+        ) : !client.deletedAt && (
+          <Card key={`new-${loanType}`}>
+            <CardContent className="flex items-center justify-between py-4">
+              <p className="text-muted-foreground text-sm">
+                {loanType === 'CASH' ? 'Sin préstamo activo' : 'Sin venta activa'}
+              </p>
+              <Button
+                size="sm"
+                onClick={() => navigate(`/clientes/${client.id}/prestamo/nuevo?type=${loanType}`)}
+              >
+                {loanType === 'CASH' ? 'Nuevo préstamo' : 'Nueva venta'}
+              </Button>
+            </CardContent>
+          </Card>
+        )
+      ))}
 
       <AlertDialog open={deleteDialog} onOpenChange={(open) => { if (!open) setDeleteDialog(false) }}>
         <AlertDialogContent>
@@ -813,7 +832,7 @@ export default function ClienteDetalle() {
       {pastLoans.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Historial de préstamos</CardTitle>
+            <CardTitle className="text-base">Historial</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {pastLoans.map((loan) => {
@@ -826,7 +845,10 @@ export default function ClienteDetalle() {
                     onClick={() => togglePastLoan(loan.id)}
                   >
                     <div>
-                      <p className="font-medium">{fmtDate(loan.startDate)}</p>
+                      <p className="font-medium">
+                        {loan.type === 'PRODUCT' ? `Venta — ${loan.productName}` : 'Préstamo'}
+                        <span className="text-muted-foreground font-normal ml-2">{fmtDate(loan.startDate)}</span>
+                      </p>
                       <p className="text-muted-foreground">
                         {fmt(loan.principal)} · {loan.installmentCount} cuotas · {FREQ_LABEL[loan.frequency]}
                       </p>

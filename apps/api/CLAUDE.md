@@ -13,7 +13,8 @@ bun test <path>        # run a single test file
 bun run typecheck      # TypeScript type-check without emitting
 
 # Database (run from apps/api/)
-bun run db:migrate:dev    # create migration SQL file only — never touches the DB
+bun run db:migrat:create  # create migration SQL file only — never touches the DB
+bun run db:migrate:dev    # create and apply migration SQL file to dev (uses .env.local)
 bun run db:migrate:prod   # apply pending migrations to production (uses .env.prod)
 bun run db:generate       # regenerate Prisma client after schema changes
 bun run db:studio         # open Prisma Studio

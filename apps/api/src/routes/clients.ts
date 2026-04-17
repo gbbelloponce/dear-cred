@@ -26,8 +26,7 @@ clients.get('/clients', async (c) => {
     orderBy: { lastName: 'asc' },
     include: {
       loans: {
-        where: { status: { in: ['ACTIVE', 'OVERDUE'] } },
-        take: 1,
+        where: { status: { in: ['ACTIVE', 'OVERDUE', 'FROZEN'] } },
         include: {
           installments: {
             where: { status: { in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'] } },
@@ -86,10 +85,10 @@ clients.delete('/clients/:id', async (c) => {
   }
 
   const activeLoan = await prisma.loan.findFirst({
-    where: { clientId: id, status: { in: ['ACTIVE', 'OVERDUE'] } },
+    where: { clientId: id, status: { in: ['ACTIVE', 'OVERDUE', 'FROZEN'] } },
   })
   if (activeLoan) {
-    return c.json({ error: 'El cliente tiene un préstamo activo. Anúlelo antes de eliminar el cliente.' }, 409)
+    return c.json({ error: 'El cliente tiene un préstamo o venta activa. Anúlelo antes de eliminar el cliente.' }, 409)
   }
 
   const updated = await prisma.client.update({ where: { id }, data: { deletedAt: new Date() } })

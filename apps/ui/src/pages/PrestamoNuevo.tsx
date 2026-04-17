@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { api, type Frequency } from '@/services/api'
+import { api, type Frequency, type LoanType } from '@/services/api'
 import { argentinaDateInputToIsoStart } from '@/lib/date'
 
 const FREQUENCY_LABEL: Record<Frequency, string> = {
@@ -27,6 +28,11 @@ function fmt(n: number) {
 export default function PrestamoNuevo() {
   const { id: clientId } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  const initialType = (searchParams.get('type') === 'PRODUCT' ? 'PRODUCT' : 'CASH') as LoanType
+
+  const [loanType, setLoanType] = useState<LoanType>(initialType)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,12 +41,16 @@ export default function PrestamoNuevo() {
   const [installmentCount, setInstallmentCount] = useState('')
   const [frequency, setFrequency] = useState<Frequency>('DAILY')
   const [startDate, setStartDate] = useState('')
+  const [productName, setProductName] = useState('')
+  const [productDescription, setProductDescription] = useState('')
 
   const principalNum = parseFloat(principal) || 0
   const rateNum = parseFloat(interestRate) || 0
   const countNum = parseInt(installmentCount) || 0
   const totalAmount = principalNum * (1 + rateNum / 100)
   const installmentAmount = countNum > 0 ? totalAmount / countNum : 0
+
+  const isProduct = loanType === 'PRODUCT'
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -54,15 +64,25 @@ export default function PrestamoNuevo() {
         installmentCount: countNum,
         frequency,
         startDate: argentinaDateInputToIsoStart(startDate),
+        type: loanType,
+        ...(isProduct ? { productName, productDescription: productDescription || undefined } : {}),
       })
       navigate(`/clientes/${clientId}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
-      setError(
-        msg.includes('409') || msg.includes('active')
-          ? 'Este cliente ya tiene un préstamo activo.'
-          : 'No se pudo crear el préstamo. Intentá de nuevo.',
-      )
+      if (msg.includes('409')) {
+        setError(
+          isProduct
+            ? 'Este cliente ya tiene una venta activa.'
+            : 'Este cliente ya tiene un préstamo activo.',
+        )
+      } else {
+        setError(
+          isProduct
+            ? 'No se pudo crear la venta. Intentá de nuevo.'
+            : 'No se pudo crear el préstamo. Intentá de nuevo.',
+        )
+      }
     } finally {
       setLoading(false)
     }
@@ -74,18 +94,55 @@ export default function PrestamoNuevo() {
         <Button variant="ghost" size="sm" onClick={() => navigate(`/clientes/${clientId}`)}>
           ← Volver
         </Button>
-        <h1 className="text-xl font-semibold">Nuevo préstamo</h1>
+        <h1 className="text-xl font-semibold">{isProduct ? 'Nueva venta' : 'Nuevo préstamo'}</h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Condiciones del préstamo</CardTitle>
+          <CardTitle>{isProduct ? 'Condiciones de la venta' : 'Condiciones del préstamo'}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label>Tipo</Label>
+              <Select value={loanType} onValueChange={(v) => setLoanType(v as LoanType)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CASH">Préstamo</SelectItem>
+                  <SelectItem value="PRODUCT">Venta de producto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isProduct && (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="productName">Nombre del producto</Label>
+                  <Input
+                    id="productName"
+                    type="text"
+                    value={productName}
+                    onChange={(e) => setProductName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="productDescription">Descripción</Label>
+                  <Textarea
+                    id="productDescription"
+                    value={productDescription}
+                    onChange={(e) => setProductDescription(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              </>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="principal">Capital ($)</Label>
+                <Label htmlFor="principal">{isProduct ? 'Costo del producto ($)' : 'Capital ($)'}</Label>
                 <Input
                   id="principal"
                   type="number"
@@ -97,7 +154,7 @@ export default function PrestamoNuevo() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="interestRate">Interés (%)</Label>
+                <Label htmlFor="interestRate">{isProduct ? 'Interés / ganancia (%)' : 'Interés (%)'}</Label>
                 <Input
                   id="interestRate"
                   type="number"
@@ -154,7 +211,7 @@ export default function PrestamoNuevo() {
                 <Separator />
                 <div className="rounded-lg bg-muted/50 p-4 flex flex-col gap-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total a devolver</span>
+                    <span className="text-muted-foreground">Total a {isProduct ? 'cobrar' : 'devolver'}</span>
                     <span className="font-medium">{fmt(totalAmount)}</span>
                   </div>
                   <div className="flex justify-between">
@@ -177,7 +234,7 @@ export default function PrestamoNuevo() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? 'Guardando...' : 'Crear préstamo'}
+                {loading ? 'Guardando...' : isProduct ? 'Crear venta' : 'Crear préstamo'}
               </Button>
             </div>
           </form>
