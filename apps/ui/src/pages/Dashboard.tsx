@@ -98,12 +98,12 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmt(data.totalOwed)}</p>
-            {(data.owedByType.CASH > 0 || data.owedByType.PRODUCT > 0) && (
+            {(data.owedByType?.CASH > 0 || data.owedByType?.PRODUCT > 0) && (
               <div className="flex gap-3 mt-1">
-                {data.owedByType.CASH > 0 && (
+                {data.owedByType?.CASH > 0 && (
                   <p className="text-xs text-muted-foreground">Préstamos: {fmt(data.owedByType.CASH)}</p>
                 )}
-                {data.owedByType.PRODUCT > 0 && (
+                {data.owedByType?.PRODUCT > 0 && (
                   <p className="text-xs text-muted-foreground">Ventas: {fmt(data.owedByType.PRODUCT)}</p>
                 )}
               </div>
