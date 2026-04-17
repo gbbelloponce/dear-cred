@@ -13,7 +13,7 @@ export function recalculateStatusAfterVoid(
   if (sum <= 0) {
     return dueDate < now ? 'OVERDUE' : 'PENDING'
   }
-  if (sum < installmentAmount) {
+  if (sum < Math.round(installmentAmount * 100) / 100) {
     return 'PARTIALLY_PAID'
   }
   const latest = remaining.sort(
@@ -28,7 +28,7 @@ export function determinePaymentStatus(
   effectiveDate: Date,
   dueDate: Date,
 ): 'PAID' | 'LATE_PAID' | 'PARTIALLY_PAID' {
-  if (amount < installmentAmount) return 'PARTIALLY_PAID'
+  if (amount < Math.round(installmentAmount * 100) / 100) return 'PARTIALLY_PAID'
   if (effectiveDate > dueDate) return 'LATE_PAID'
   return 'PAID'
 }

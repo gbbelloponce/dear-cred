@@ -26,7 +26,8 @@ installments.use('/:id/resolve', authMiddleware)
 
 installments.post('/:id/payments', zValidator('json', paymentSchema), async (c) => {
   const id = c.req.param('id')
-  const { amount, method, paymentDate } = c.req.valid('json')
+  const { amount: rawAmount, method, paymentDate } = c.req.valid('json')
+  const amount = Math.round(rawAmount * 100) / 100
 
   const installment = await prisma.installment.findFirstOrThrow({
     where: { id, loan: { client: { userId: c.get('user').id } } },

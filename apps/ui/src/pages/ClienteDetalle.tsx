@@ -674,7 +674,7 @@ export default function ClienteDetalle() {
                             <Input
                               type="number"
                               min="0.01"
-                              step="0.01"
+                              step="any"
                               max={inst.amount}
                               value={payAmount}
                               onChange={(e) => setPayAmount(e.target.value)}
@@ -683,7 +683,7 @@ export default function ClienteDetalle() {
                             <button
                               type="button"
                               className="text-xs text-muted-foreground hover:text-foreground text-left"
-                              onClick={() => setPayAmount(inst.amount.toString())}
+                              onClick={() => setPayAmount(inst.amount.toFixed(2))}
                             >
                               Completar monto ({fmt(inst.amount)})
                             </button>
