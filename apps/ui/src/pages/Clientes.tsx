@@ -10,7 +10,7 @@ import { api, type ClientSummary } from '@/services/api'
 const PAGE_SIZE = 10
 
 const LOAN_BADGE_LABEL: Record<string, Record<string, string>> = {
-  CASH: { ACTIVE: 'Activo', OVERDUE: 'En mora', FROZEN: 'Congelado' },
+  CASH: { ACTIVE: 'Préstamo Activo', OVERDUE: 'Préstamo En mora', FROZEN: 'Préstamo Congelado' },
   PRODUCT: { ACTIVE: 'Venta activa', OVERDUE: 'Venta en mora', FROZEN: 'Venta congelada' },
 }
 
