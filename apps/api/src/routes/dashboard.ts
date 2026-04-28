@@ -47,7 +47,7 @@ dashboard.get('/', async (c) => {
         status: { in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'] },
         loan: { status: { notIn: ['NULLIFIED'] }, client: { userId, deletedAt: null } },
       },
-      select: { amount: true, payments: { select: { amount: true, isVoided: true } }, loan: { select: { type: true } } },
+      select: { amount: true, payments: { select: { amount: true, isVoided: true } }, loan: { select: { type: true, principal: true, totalAmount: true } } },
     }),
 
     // collected in period (includes payments from deleted clients — money was received)
@@ -69,6 +69,8 @@ dashboard.get('/', async (c) => {
         id: true,
         type: true,
         productName: true,
+        principal: true,
+        totalAmount: true,
         client: { select: { id: true, firstName: true, lastName: true } },
         installments: {
           select: { status: true, amount: true, payments: { select: { amount: true, isVoided: true } } },
@@ -86,10 +88,12 @@ dashboard.get('/', async (c) => {
 
   // totalOwed: for each pending installment, owed = amount - sum(payments)
   const owedByType = { CASH: 0, PRODUCT: 0 }
+  let totalPrincipalOwed = 0
   const totalOwed = pendingInstallments.reduce((sum, inst) => {
     const paid = inst.payments.filter((p) => !p.isVoided).reduce((s, p) => s + p.amount, 0)
     const owed = inst.amount - paid
     owedByType[inst.loan.type] += owed
+    totalPrincipalOwed += owed * (inst.loan.principal / inst.loan.totalAmount)
     return sum + owed
   }, 0)
 
@@ -125,6 +129,8 @@ dashboard.get('/', async (c) => {
         return sum + (i.amount - paid)
       }, 0)
 
+    const remainingPrincipal = remaining * (loan.principal / loan.totalAmount)
+
     return {
       clientId: loan.client.id,
       clientName: `${loan.client.firstName} ${loan.client.lastName}`,
@@ -132,11 +138,13 @@ dashboard.get('/', async (c) => {
       type: loan.type,
       productName: loan.productName,
       remaining,
+      remainingPrincipal,
     }
   })
 
   return c.json({
     totalOwed,
+    totalPrincipalOwed,
     owedByType,
     collected,
     overdueClients,
