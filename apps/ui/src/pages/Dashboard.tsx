@@ -108,7 +108,7 @@ export default function Dashboard() {
                 )}
               </div>
             )}
-            {data.totalOwed > 0 && (
+            {data.totalOwed > 0 && data.totalPrincipalOwed != null && (
               <div className="flex gap-3 mt-1">
                 <p className="text-xs text-muted-foreground">Capital: {fmt(data.totalPrincipalOwed)}</p>
                 <p className="text-xs text-muted-foreground">Interés: {fmt(data.totalOwed - data.totalPrincipalOwed)}</p>
@@ -197,7 +197,9 @@ export default function Dashboard() {
                     </td>
                     <td className="px-4 py-2 text-right">
                       <p className="font-medium">{fmt(row.remaining)}</p>
-                      <p className="text-xs text-muted-foreground">capital {fmt(row.remainingPrincipal)}</p>
+                      {row.remainingPrincipal != null && (
+                        <p className="text-xs text-muted-foreground">Capital: {fmt(row.remainingPrincipal)}</p>
+                      )}
                     </td>
                   </tr>
                 ))}
