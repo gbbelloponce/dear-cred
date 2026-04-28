@@ -108,6 +108,12 @@ export default function Dashboard() {
                 )}
               </div>
             )}
+            {data.totalOwed > 0 && data.totalPrincipalOwed != null && (
+              <div className="flex gap-3 mt-1">
+                <p className="text-xs text-muted-foreground">Capital: {fmt(data.totalPrincipalOwed)}</p>
+                <p className="text-xs text-muted-foreground">Interés: {fmt(data.totalOwed - data.totalPrincipalOwed)}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -189,7 +195,12 @@ export default function Dashboard() {
                         {row.type === 'PRODUCT' ? `Venta — ${row.productName}` : 'Préstamo'}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-right font-medium">{fmt(row.remaining)}</td>
+                    <td className="px-4 py-2 text-right">
+                      <p className="font-medium">{fmt(row.remaining)}</p>
+                      {row.remainingPrincipal != null && (
+                        <p className="text-xs text-muted-foreground">Capital: {fmt(row.remainingPrincipal)}</p>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

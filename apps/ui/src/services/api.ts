@@ -99,12 +99,13 @@ export type ClientDetail = {
 
 export type DashboardData = {
   totalOwed: number
+  totalPrincipalOwed: number
   owedByType: { CASH: number; PRODUCT: number }
   collected: number
   overdueClients: Array<{ id: string; firstName: string; lastName: string }>
   onTimeRate: number
   cashVsTransfer: Record<string, number>
-  debtPerClient: Array<{ clientId: string; clientName: string; loanId: string; type: LoanType; productName: string | null; remaining: number }>
+  debtPerClient: Array<{ clientId: string; clientName: string; loanId: string; type: LoanType; productName: string | null; remaining: number; remainingPrincipal: number }>
 }
 
 export const api = {

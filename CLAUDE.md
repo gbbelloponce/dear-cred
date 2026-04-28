@@ -332,14 +332,15 @@ Query: `WHERE status = 'PENDING' AND dueDate < now()` catches all today's unpaid
 
 ## Dashboard Metrics (`GET /dashboard`)
 
-| Key                  | Description                                                                                      |
-|----------------------|--------------------------------------------------------------------------------------------------|
-| `totalOwed`          | Sum of all pending balances across active loans (excludes soft-deleted clients)                  |
-| `collectedThisMonth` | Sum of all non-voided payments in the current calendar month (includes soft-deleted clients)     |
-| `overdueClients`     | Clients with at least one OVERDUE installment (excludes soft-deleted clients)                    |
-| `onTimeRate`         | % of clients with no OVERDUE installments (excludes soft-deleted clients)                        |
-| `cashVsTransfer`     | Total collected split by payment method (includes soft-deleted clients)                          |
-| `debtPerClient`      | Remaining debt breakdown per client (excludes soft-deleted clients)                              |
+| Key                    | Description                                                                                      |
+|------------------------|--------------------------------------------------------------------------------------------------|
+| `totalOwed`            | Sum of all pending balances across active loans (excludes soft-deleted clients)                  |
+| `totalPrincipalOwed`   | Capital portion of `totalOwed` — computed as `owed × (principal / totalAmount)` per installment |
+| `collectedThisMonth`   | Sum of all non-voided payments in the current calendar month (includes soft-deleted clients)     |
+| `overdueClients`       | Clients with at least one OVERDUE installment (excludes soft-deleted clients)                    |
+| `onTimeRate`           | % of clients with no OVERDUE installments (excludes soft-deleted clients)                        |
+| `cashVsTransfer`       | Total collected split by payment method (includes soft-deleted clients)                          |
+| `debtPerClient`        | Remaining debt breakdown per client (excludes soft-deleted clients); each entry includes `remainingPrincipal` (capital portion of `remaining`) |
 
 ---
 
