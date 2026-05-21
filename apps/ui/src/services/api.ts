@@ -102,6 +102,7 @@ export type DashboardData = {
   totalPrincipalOwed: number
   owedByType: { CASH: number; PRODUCT: number }
   collected: number
+  collectedPrincipal: number
   overdueClients: Array<{ id: string; firstName: string; lastName: string }>
   onTimeRate: number
   cashVsTransfer: Record<string, number>
