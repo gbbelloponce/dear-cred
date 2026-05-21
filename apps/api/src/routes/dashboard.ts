@@ -51,9 +51,9 @@ dashboard.get('/', async (c) => {
     }),
 
     // collected in period (includes payments from deleted clients — money was received)
-    prisma.payment.aggregate({
+    prisma.payment.findMany({
       where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false, installment: { loan: { client: { userId } } } },
-      _sum: { amount: true },
+      select: { amount: true, installment: { select: { loan: { select: { principal: true, totalAmount: true } } } } },
     }),
 
     // overdueClients
@@ -97,7 +97,11 @@ dashboard.get('/', async (c) => {
     return sum + owed
   }, 0)
 
-  const collected = paymentsInPeriod._sum.amount ?? 0
+  let collectedPrincipal = 0
+  const collected = paymentsInPeriod.reduce((sum, p) => {
+    collectedPrincipal += p.amount * (p.installment.loan.principal / p.installment.loan.totalAmount)
+    return sum + p.amount
+  }, 0)
 
   // overdueClients: unique clients
   const overdueMap = new Map<string, { id: string; firstName: string; lastName: string }>()
@@ -147,6 +151,7 @@ dashboard.get('/', async (c) => {
     totalPrincipalOwed,
     owedByType,
     collected,
+    collectedPrincipal,
     overdueClients,
     onTimeRate,
     cashVsTransfer,

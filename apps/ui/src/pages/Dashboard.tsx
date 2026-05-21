@@ -110,8 +110,8 @@ export default function Dashboard() {
             )}
             {data.totalOwed > 0 && data.totalPrincipalOwed != null && (
               <div className="flex gap-3 mt-1">
-                <p className="text-xs text-muted-foreground">Capital: {fmt(data.totalPrincipalOwed)}</p>
-                <p className="text-xs text-muted-foreground">Interés: {fmt(data.totalOwed - data.totalPrincipalOwed)}</p>
+                <p className="text-xs text-muted-foreground">Prestado: {fmt(data.totalPrincipalOwed)}</p>
+                <p className="text-xs text-muted-foreground">Ganancia: {fmt(data.totalOwed - data.totalPrincipalOwed)}</p>
               </div>
             )}
           </CardContent>
@@ -123,6 +123,12 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmt(data.collected)}</p>
+            {data.collected > 0 && data.collectedPrincipal != null && (
+              <div className="flex gap-3 mt-1">
+                <p className="text-xs text-muted-foreground">Prestado: {fmt(data.collectedPrincipal)}</p>
+                <p className="text-xs text-muted-foreground">Ganancia: {fmt(data.collected - data.collectedPrincipal)}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
