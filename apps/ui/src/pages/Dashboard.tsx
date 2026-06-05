@@ -111,7 +111,7 @@ export default function Dashboard() {
             {data.totalOwed > 0 && data.totalPrincipalOwed != null && (
               <div className="flex gap-3 mt-1">
                 <p className="text-xs text-muted-foreground">Prestado: {fmt(data.totalPrincipalOwed)}</p>
-                <p className="text-xs text-muted-foreground">Ganancia: {fmt(data.totalOwed - data.totalPrincipalOwed)}</p>
+                <p className="text-xs text-muted-foreground">Ganancia proyectada: {fmt(data.totalOwed - data.totalPrincipalOwed)}</p>
               </div>
             )}
           </CardContent>
@@ -123,10 +123,20 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmt(data.collected)}</p>
+            {(data.collectedByType?.CASH > 0 || data.collectedByType?.PRODUCT > 0) && (
+              <div className="flex gap-3 mt-1">
+                {data.collectedByType?.CASH > 0 && (
+                  <p className="text-xs text-muted-foreground">Préstamos: {fmt(data.collectedByType.CASH)}</p>
+                )}
+                {data.collectedByType?.PRODUCT > 0 && (
+                  <p className="text-xs text-muted-foreground">Ventas: {fmt(data.collectedByType.PRODUCT)}</p>
+                )}
+              </div>
+            )}
             {data.collected > 0 && data.collectedPrincipal != null && (
               <div className="flex gap-3 mt-1">
                 <p className="text-xs text-muted-foreground">Prestado: {fmt(data.collectedPrincipal)}</p>
-                <p className="text-xs text-muted-foreground">Ganancia: {fmt(data.collected - data.collectedPrincipal)}</p>
+                <p className="text-xs text-muted-foreground">Ganancia cobrada: {fmt(data.collected - data.collectedPrincipal)}</p>
               </div>
             )}
           </CardContent>
@@ -178,6 +188,35 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {data.expectedCollection && (
+        <Card className="mb-6">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Cobranza esperada</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+              <div>
+                <p className="text-lg font-semibold">{fmt(data.expectedCollection.overdueUncollected)}</p>
+                <p className="text-xs text-muted-foreground">Vencido sin cobrar</p>
+              </div>
+              <div>
+                <p className="text-lg font-semibold">{fmt(data.expectedCollection.next7Days)}</p>
+                <p className="text-xs text-muted-foreground">Próximos 7 días</p>
+              </div>
+              <div>
+                <p className="text-lg font-semibold">{fmt(data.expectedCollection.next8To15Days)}</p>
+                <p className="text-xs text-muted-foreground">8 a 15 días</p>
+              </div>
+              <div>
+                <p className="text-lg font-semibold">{fmt(data.expectedCollection.next16To30Days)}</p>
+                <p className="text-xs text-muted-foreground">16 a 30 días</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">Estimado sobre cuotas pendientes — no garantiza el cobro efectivo.</p>
+          </CardContent>
+        </Card>
+      )}
 
       {data.debtPerClient.length > 0 && (
         <Card>

@@ -41,19 +41,19 @@ dashboard.get('/', async (c) => {
     allActiveLoans,
     paymentsByMethod,
   ] = await Promise.all([
-    // totalOwed: sum of pending balances
+    // totalOwed + expectedCollection: sum of pending balances
     prisma.installment.findMany({
       where: {
         status: { in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'] },
         loan: { status: { notIn: ['NULLIFIED'] }, client: { userId, deletedAt: null } },
       },
-      select: { amount: true, payments: { select: { amount: true, isVoided: true } }, loan: { select: { type: true, principal: true, totalAmount: true } } },
+      select: { amount: true, dueDate: true, payments: { select: { amount: true, isVoided: true } }, loan: { select: { type: true, principal: true, totalAmount: true } } },
     }),
 
     // collected in period (includes payments from deleted clients — money was received)
     prisma.payment.findMany({
       where: { paymentDate: { gte: rangeStart, lte: rangeEnd }, isVoided: false, installment: { loan: { client: { userId } } } },
-      select: { amount: true, installment: { select: { loan: { select: { principal: true, totalAmount: true } } } } },
+      select: { amount: true, installment: { select: { loan: { select: { principal: true, totalAmount: true, type: true } } } } },
     }),
 
     // overdueClients
@@ -86,7 +86,11 @@ dashboard.get('/', async (c) => {
     }),
   ])
 
-  // totalOwed: for each pending installment, owed = amount - sum(payments)
+  // totalOwed + expectedCollection: for each pending installment, owed = amount - sum(payments)
+  const d7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const d15 = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000)
+  const d30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+  const expectedCollection = { overdueUncollected: 0, next7Days: 0, next8To15Days: 0, next16To30Days: 0 }
   const owedByType = { CASH: 0, PRODUCT: 0 }
   let totalPrincipalOwed = 0
   const totalOwed = pendingInstallments.reduce((sum, inst) => {
@@ -94,12 +98,23 @@ dashboard.get('/', async (c) => {
     const owed = inst.amount - paid
     owedByType[inst.loan.type] += owed
     totalPrincipalOwed += owed * (inst.loan.principal / inst.loan.totalAmount)
+    if (inst.dueDate < now) {
+      expectedCollection.overdueUncollected += owed
+    } else if (inst.dueDate < d7) {
+      expectedCollection.next7Days += owed
+    } else if (inst.dueDate < d15) {
+      expectedCollection.next8To15Days += owed
+    } else if (inst.dueDate <= d30) {
+      expectedCollection.next16To30Days += owed
+    }
     return sum + owed
   }, 0)
 
+  const collectedByType = { CASH: 0, PRODUCT: 0 }
   let collectedPrincipal = 0
   const collected = paymentsInPeriod.reduce((sum, p) => {
     collectedPrincipal += p.amount * (p.installment.loan.principal / p.installment.loan.totalAmount)
+    collectedByType[p.installment.loan.type] += p.amount
     return sum + p.amount
   }, 0)
 
@@ -152,10 +167,12 @@ dashboard.get('/', async (c) => {
     owedByType,
     collected,
     collectedPrincipal,
+    collectedByType,
     overdueClients,
     onTimeRate,
     cashVsTransfer,
     debtPerClient,
+    expectedCollection,
   })
 })
 
