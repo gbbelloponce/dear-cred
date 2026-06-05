@@ -21,23 +21,43 @@ clients.use('/clients/*', authMiddleware)
 clients.get('/clients', async (c) => {
   const userId = c.get('user').id
   const includeDeleted = c.req.query('includeDeleted') === 'true'
-  const data = await prisma.client.findMany({
-    where: { userId, ...(includeDeleted ? {} : { deletedAt: null }) },
-    orderBy: { lastName: 'asc' },
-    include: {
-      loans: {
-        where: { status: { in: ['ACTIVE', 'OVERDUE', 'FROZEN'] } },
-        include: {
-          installments: {
-            where: { status: { in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'] } },
-            select: { id: true, status: true, dueDate: true, amount: true },
+  const clientFilter = { userId, ...(includeDeleted ? {} : { deletedAt: null }) }
+
+  const [data, installmentHistory] = await Promise.all([
+    prisma.client.findMany({
+      where: clientFilter,
+      orderBy: { lastName: 'asc' },
+      include: {
+        loans: {
+          where: { status: { in: ['ACTIVE', 'OVERDUE', 'FROZEN'] } },
+          include: {
+            installments: {
+              where: { status: { in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'] } },
+              select: { id: true, status: true, dueDate: true, amount: true },
+            },
           },
         },
       },
-    },
-  })
+    }),
+    prisma.installment.findMany({
+      where: { loan: { client: clientFilter, status: { notIn: ['NULLIFIED'] } } },
+      select: { status: true, loan: { select: { clientId: true } } },
+    }),
+  ])
 
-  return c.json(data)
+  type ClientScore = 'RED' | 'YELLOW' | 'GREEN'
+  const scoreMap = new Map<string, ClientScore>()
+  for (const inst of installmentHistory) {
+    const clientId = inst.loan.clientId
+    const current = scoreMap.get(clientId) ?? 'GREEN'
+    if (inst.status === 'OVERDUE') {
+      scoreMap.set(clientId, 'RED')
+    } else if (current !== 'RED' && (inst.status === 'LATE_PAID' || inst.status === 'PARTIALLY_PAID')) {
+      scoreMap.set(clientId, 'YELLOW')
+    }
+  }
+
+  return c.json(data.map((client) => ({ ...client, score: scoreMap.get(client.id) ?? 'GREEN' })))
 })
 
 clients.post('/clients', zValidator('json', createClientSchema), async (c) => {

@@ -21,6 +21,8 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export type ClientScore = 'RED' | 'YELLOW' | 'GREEN'
+
 export type ClientSummary = {
   id: string
   firstName: string
@@ -31,6 +33,7 @@ export type ClientSummary = {
   notes: string | null
   createdAt: string
   deletedAt: string | null
+  score: ClientScore
   loans: Array<{
     id: string
     type: LoanType
@@ -103,10 +106,17 @@ export type DashboardData = {
   owedByType: { CASH: number; PRODUCT: number }
   collected: number
   collectedPrincipal: number
+  collectedByType: { CASH: number; PRODUCT: number }
   overdueClients: Array<{ id: string; firstName: string; lastName: string }>
   onTimeRate: number
   cashVsTransfer: Record<string, number>
   debtPerClient: Array<{ clientId: string; clientName: string; loanId: string; type: LoanType; productName: string | null; remaining: number; remainingPrincipal: number }>
+  expectedCollection: {
+    overdueUncollected: number
+    next7Days: number
+    next8To15Days: number
+    next16To30Days: number
+  }
 }
 
 export const api = {

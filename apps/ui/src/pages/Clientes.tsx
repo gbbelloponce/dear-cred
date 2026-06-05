@@ -5,9 +5,16 @@ import { UserIcon, Search01Icon, Delete02Icon } from '@hugeicons/core-free-icons
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { api, type ClientSummary } from '@/services/api'
+import { cn } from '@/lib/utils'
+import { api, type ClientSummary, type ClientScore } from '@/services/api'
 
 const PAGE_SIZE = 10
+
+const SCORE_DOT: Record<ClientScore, string> = {
+  RED: 'bg-destructive',
+  YELLOW: 'bg-yellow-400',
+  GREEN: 'bg-green-500',
+}
 
 const LOAN_BADGE_LABEL: Record<string, Record<string, string>> = {
   CASH: { ACTIVE: 'Préstamo Activo', OVERDUE: 'Préstamo En mora', FROZEN: 'Préstamo Congelado' },
@@ -134,12 +141,17 @@ export default function Clientes() {
                     </p>
                     <p className="text-sm text-muted-foreground">DNI {client.dni}</p>
                   </div>
-                  <div className="flex gap-1 flex-wrap justify-end">
-                    {client.loans.map((loan) => (
-                      <Badge key={loan.id} variant={LOAN_STATUS_VARIANT[loan.status] ?? 'secondary'}>
-                        {LOAN_BADGE_LABEL[loan.type]?.[loan.status] ?? loan.status}
-                      </Badge>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    {client.score && (
+                      <div className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0', SCORE_DOT[client.score])} />
+                    )}
+                    <div className="flex gap-1 flex-wrap justify-end">
+                      {client.loans.map((loan) => (
+                        <Badge key={loan.id} variant={LOAN_STATUS_VARIANT[loan.status] ?? 'secondary'}>
+                          {LOAN_BADGE_LABEL[loan.type]?.[loan.status] ?? loan.status}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </li>
               )
