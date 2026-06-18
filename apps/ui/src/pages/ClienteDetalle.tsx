@@ -255,10 +255,6 @@ export default function ClienteDetalle() {
   const mountedRef = useRef(true)
   const payFormRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (payingId) payFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [payingId])
-
   function load() {
     if (!id) return
     api
@@ -306,6 +302,7 @@ export default function ClienteDetalle() {
     setPayMethod('TRANSFER')
     setPayDate(formatArgentinaDateInput(new Date()))
     setPayError(null)
+    setTimeout(() => payFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
   }
 
   async function handlePay(e: FormEvent) {
