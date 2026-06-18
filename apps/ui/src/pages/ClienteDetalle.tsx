@@ -253,6 +253,7 @@ export default function ClienteDetalle() {
   const [expandedLoanIds, setExpandedLoanIds] = useState<Set<string>>(new Set())
 
   const mountedRef = useRef(true)
+  const payFormRef = useRef<HTMLDivElement>(null)
 
   function load() {
     if (!id) return
@@ -301,6 +302,7 @@ export default function ClienteDetalle() {
     setPayMethod('TRANSFER')
     setPayDate(formatArgentinaDateInput(new Date()))
     setPayError(null)
+    setTimeout(() => payFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
   }
 
   async function handlePay(e: FormEvent) {
@@ -655,7 +657,7 @@ export default function ClienteDetalle() {
 
               {/* Payment form */}
               {payingId && loan.installments.some((i) => i.id === payingId) && (
-                <div className="rounded-lg border bg-muted/30 p-4">
+                <div ref={payFormRef} className="rounded-lg border bg-muted/30 p-4">
                   {(() => {
                     const inst = loan.installments.find((i) => i.id === payingId)
                     if (!inst) return null
