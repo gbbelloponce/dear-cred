@@ -263,6 +263,12 @@ OVERDUE        → LATE_PAID      paid in full after being overdue
 - Deleted clients can be viewed read-only at `/clientes/:id`
 - Client list has an "Eliminados" toggle that reveals soft-deleted clients in a separate dashed section
 
+### Ownership & Access Control
+- Every `Client` row carries a `userId` (the Supabase Auth user that owns it); DNI uniqueness is scoped per user (`@@unique([dni, userId])`)
+- The model is **flat and single-owner**: all read/write routes scope access with `client: { userId: currentUser.id }` (exact-match). There is no user hierarchy today
+- **Known gap (pre-existing):** `POST /clients/:id/loans` is the one write route that does **not** re-verify client ownership before creating the loan — it trusts the `:id` param and writes directly. Every other write route (`installments`, `payments`, `resolve`, `nullify`, `freeze`/`unfreeze`, `void`) first fetches the entity with a `userId` filter via `findFirstOrThrow`. Harmless under the current single-admin deployment, but it becomes a real IDOR once more than one user can authenticate — **must be closed before shipping multi-user**
+- **Planned multi-user (mid-term):** sub-users manage their own clients; a parent admin can *read* clients owned by users below it, but not vice-versa. The current flat scheme does not support this — read scoping would move from exact-match to a visible-user-id set, and the ownership gap above must be closed first
+
 ---
 
 ## API Routes (REST)
