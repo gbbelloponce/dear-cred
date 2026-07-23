@@ -193,7 +193,7 @@ enum PaymentMethod {
 4. If a generated due date lands on **Sunday ARG**, shift it forward to Monday
 5. For `DAILY` loans, the Sunday shift **cascades** — all subsequent installments shift too so no two share the same date
 6. For `WEEKLY`, `FORTNIGHTLY`, and `MONTHLY` loans, each installment is evaluated independently — no cascade
-7. A client can have at most one active/overdue/frozen `CASH` loan and one active/overdue/frozen `PRODUCT` loan simultaneously — two loans of the same type are not allowed at the same time
+7. A client can have at most one active/overdue/frozen `CASH` loan at a time. There is **no limit** on active/overdue/frozen `PRODUCT` loans — multiple product sales can coexist for the same client
 
 ### Installment Status Transitions
 ```
@@ -249,7 +249,7 @@ OVERDUE        → LATE_PAID      paid in full after being overdue
 - **Overdue cron skips `FROZEN` loans** — no installments marked overdue, no penalties appended
 - Payments are still allowed on a `FROZEN` loan
 - Nullification is allowed on a `FROZEN` loan
-- A new loan cannot be created for a client with a `FROZEN` loan
+- A new `CASH` loan cannot be created while the client has a `FROZEN` (or active/overdue) `CASH` loan; `PRODUCT` sales are unlimited and can always be created
 - Pre-existing `OVERDUE` installments remain `OVERDUE` after freezing
 - **Unfreezing:** if any installment is `OVERDUE` → loan reverts to `OVERDUE`; otherwise → `ACTIVE`
 - `FROZEN` loan debt appears in `totalOwed` and `debtPerClient`
@@ -279,7 +279,7 @@ PUT    /clients/:id                   # edit client
 DELETE /clients/:id                   # soft-delete (blocked if active/overdue/frozen loan exists)
 
 GET    /clients/:id/loans             # loan history
-POST   /clients/:id/loans             # create loan (blocked if active/overdue/frozen loan of the same type exists)
+POST   /clients/:id/loans             # create loan (blocked if active/overdue/frozen CASH loan exists; PRODUCT sales unlimited)
 GET    /loans/:id                     # loan detail with all installments
 
 POST   /installments/:id/payments     # register full or partial payment
@@ -360,7 +360,7 @@ Query: `WHERE status = 'PENDING' AND dueDate < now()` catches all today's unpaid
 
 ## Key Constraints & Rules Summary
 
-- One active/overdue/frozen loan per type (CASH / PRODUCT) per client at a time — a client may have one of each simultaneously
+- At most one active/overdue/frozen `CASH` loan per client at a time; `PRODUCT` sales are unlimited and can coexist
 - Installment amounts are always fixed — same for all installments including penalties
 - Partial payments do NOT carry balance to the next installment
 - Each partial payment triggers one penalty installment appended at end of plan

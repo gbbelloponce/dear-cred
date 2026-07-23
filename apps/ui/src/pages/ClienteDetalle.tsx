@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
-import { api, type ClientDetail, type LoanWithInstallments, type Installment, type PaymentMethod, type LoanType } from '@/services/api'
+import { api, type ClientDetail, type LoanWithInstallments, type Installment, type PaymentMethod } from '@/services/api'
 import { argentinaDateInputToIsoStart, formatArgentinaDateInput } from '@/lib/date'
 
 const FREQ_LABEL: Record<string, string> = {
@@ -413,7 +413,8 @@ export default function ClienteDetalle() {
     (l) => l.status === 'ACTIVE' || l.status === 'OVERDUE' || l.status === 'FROZEN',
   )
   const cashLoan = activeLoans.find((l) => l.type === 'CASH')
-  const productLoan = activeLoans.find((l) => l.type === 'PRODUCT')
+  const productLoans = activeLoans.filter((l) => l.type === 'PRODUCT')
+  const activeLoanCards = cashLoan ? [cashLoan, ...productLoans] : productLoans
   const pastLoans = client.loans.filter((l) => l.status === 'COMPLETED' || l.status === 'NULLIFIED')
 
   return (
@@ -535,11 +536,9 @@ export default function ClienteDetalle() {
       </Card>
 
       {/* Active loan panels */}
-      {[
-        { loan: cashLoan, loanType: 'CASH' as LoanType },
-        { loan: productLoan, loanType: 'PRODUCT' as LoanType },
-      ].map(({ loan, loanType }) => (
-        loan ? (
+      {activeLoanCards.map((loan) => {
+        const loanType = loan.type
+        return (
           <Card key={loan.id}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -740,22 +739,38 @@ export default function ClienteDetalle() {
               <p className="text-xs text-muted-foreground">* Penalidad — el número debajo indica la cuota que la originó</p>
             </CardContent>
           </Card>
-        ) : !client.deletedAt && (
-          <Card key={`new-${loanType}`}>
-            <CardContent className="flex items-center justify-between py-4">
-              <p className="text-muted-foreground text-sm">
-                {loanType === 'CASH' ? 'Sin préstamo activo' : 'Sin venta activa'}
-              </p>
-              <Button
-                size="sm"
-                onClick={() => navigate(`/clientes/${client.id}/prestamo/nuevo?type=${loanType}`)}
-              >
-                {loanType === 'CASH' ? 'Nuevo préstamo' : 'Nueva venta'}
-              </Button>
-            </CardContent>
-          </Card>
         )
-      ))}
+      })}
+
+      {/* New loan / new sale actions */}
+      {!client.deletedAt && !cashLoan && (
+        <Card>
+          <CardContent className="flex items-center justify-between py-4">
+            <p className="text-muted-foreground text-sm">Sin préstamo activo</p>
+            <Button
+              size="sm"
+              onClick={() => navigate(`/clientes/${client.id}/prestamo/nuevo?type=CASH`)}
+            >
+              Nuevo préstamo
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+      {!client.deletedAt && (
+        <Card>
+          <CardContent className="flex items-center justify-between py-4">
+            <p className="text-muted-foreground text-sm">
+              {productLoans.length === 0 ? 'Sin venta activa' : 'Registrar otra venta'}
+            </p>
+            <Button
+              size="sm"
+              onClick={() => navigate(`/clientes/${client.id}/prestamo/nuevo?type=PRODUCT`)}
+            >
+              Nueva venta
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <AlertDialog open={deleteDialog} onOpenChange={(open) => { if (!open) setDeleteDialog(false) }}>
         <AlertDialogContent>
