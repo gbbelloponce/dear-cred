@@ -48,11 +48,14 @@ loans.post('/clients/:id/loans', zValidator('json', createLoanSchema), async (c)
     throw new HTTPException(400, { message: 'productName is required for PRODUCT loans' })
   }
 
-  const activeLoan = await prisma.loan.findFirst({
-    where: { clientId, type: body.type, status: { in: ['ACTIVE', 'OVERDUE', 'FROZEN'] }, client: { userId: c.get('user').id } },
-  })
-  if (activeLoan) {
-    throw new HTTPException(409, { message: 'Client already has an active loan of this type' })
+  // Only one active CASH loan is allowed per client; PRODUCT sales can coexist.
+  if (body.type !== 'PRODUCT') {
+    const activeLoan = await prisma.loan.findFirst({
+      where: { clientId, type: body.type, status: { in: ['ACTIVE', 'OVERDUE', 'FROZEN'] }, client: { userId: c.get('user').id } },
+    })
+    if (activeLoan) {
+      throw new HTTPException(409, { message: 'Client already has an active loan of this type' })
+    }
   }
 
   const totalAmount = body.principal * (1 + body.interestRate / 100)
